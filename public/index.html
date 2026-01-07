@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>barcodesDB</title>
+  <link rel="stylesheet" href="/barcodesdb/style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <div class="brand-title">barcodesDB</div>
+        <span class="badge">A database of DNA barcodes</span>
+      </div>
+      <nav class="nav">
+        <a class="active" href="/barcodesdb/">Home</a>
+        <a href="/barcodesdb/kmer">K-mer Lookup</a>
+        <a href="/barcodesdb/substring">Search barcodes</a>
+      </nav>
+    </div>
+
+    <div class="card">
+      <h2>Welcome to barcodesDB</h2>
+      <p>Look up barcodes, explore results, and download what you need.</p>
+      <div class="row">
+        <div class="col">
+          <h3>K-mer Existence</h3>
+          <p>Paste k-mers or upload a file to check if they exist in the barcode database. Get composition and GC stats.</p>
+          <a class="btn" href="/barcodesdb/kmer">Open K-mer Lookup →</a>
+        </div>
+        <div class="col">
+          <h3>Search barcodes</h3>
+          <p>Search and filter barcodes by substring and composition, then download the current view.</p>
+          <a class="btn" href="/barcodesdb/substring">Open Search →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">© 2025 barcodesDB • Roaring Bitmap powered</div>
+  </div>
+</body>
+</html>

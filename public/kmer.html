@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>barcodesDB • K-mer Lookup</title>
+  <link rel="stylesheet" href="/barcodesdb/style.css" />
+  <script defer src="/barcodesdb/common.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <div class="brand-title">barcodesDB</div>
+        <span class="badge">K-mer Lookup</span>
+      </div>
+      <nav class="nav">
+        <a href="/barcodesdb/">Home</a>
+        <a class="active" href="/barcodesdb/kmer">K-mer Lookup</a>
+        <a href="/barcodesdb/substring">Search barcodes</a>
+      </nav>
+    </div>
+
+    <div class="card">
+      <h2>K-mer Existence</h2>
+      <p class="help">Paste k-mers (one per line) or upload a text file. We'll check against roar_barcodes_18.bin and return composition stats.</p>
+      <div class="row">
+        <div class="col">
+          <textarea id="kmers" rows="10" placeholder="ACGT\nAACCGGTT\n..."></textarea>
+        </div>
+        <div class="col">
+          <input class="input" type="file" id="file" accept=".txt" />
+          <div class="help">Plain text; one k-mer per line.</div>
+          <div style="margin-top:12px;display:flex;gap:10px">
+            <button class="btn" id="run">Run Query</button>
+            <button class="btn secondary" id="clear">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="results" style="margin-top:20px"></div>
+    <div class="footer">© 2025 barcodesDB</div>
+  </div>
+
+  <script>
+    const runBtn = document.getElementById('run');
+    const clearBtn = document.getElementById('clear');
+    const fileInp = document.getElementById('file');
+    const kmersTA = document.getElementById('kmers');
+    const results = document.getElementById('results');
+
+    clearBtn.onclick = () => { kmersTA.value=''; fileInp.value=''; results.innerHTML=''; };
+
+    runBtn.onclick = async () => {
+      results.innerHTML = '<div class="card">Running…</div>';
+      const text = kmersTA.value.trim();
+      const hasText = !!text;
+      const hasFile = fileInp.files && fileInp.files[0];
+      try {
+        let res;
+        if (hasFile) {
+          const fd = new FormData();
+          fd.append('kmersFile', fileInp.files[0]);
+          res = await fetch('/barcodesdb/api/query-kmer', { method: 'POST', body: fd });
+        } else if (hasText) {
+          const kmers = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+          res = await fetch('/barcodesdb/api/query-kmer', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kmers })
+          });
+        } else {
+          results.innerHTML = '<div class="card">Please provide k-mers or upload a file.</div>';
+          return;
+        }
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        renderResults(results, data);
+      } catch (e) {
+        results.innerHTML = `<div class="card note">${e.message}</div>`;
+      }
+    };
+  </script>
+</body>
+</html>

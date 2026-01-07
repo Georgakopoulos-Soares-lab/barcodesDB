@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>barcodesDB • Search barcodes</title>
+  <link rel="stylesheet" href="/barcodesdb/style.css" />
+  <script defer src="/barcodesdb/common.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <div class="brand-title">barcodesDB</div>
+        <span class="badge">Search barcodes</span>
+      </div>
+      <nav class="nav">
+        <a href="/barcodesdb/">Home</a>
+        <a href="/barcodesdb/kmer">K-mer Lookup</a>
+        <a class="active" href="/barcodesdb/substring">Search barcodes</a>
+      </nav>
+    </div>
+
+    <div class="card">
+      <h2>Search barcodes</h2>
+      <p class="help">
+        Choose search options, fetch a page, and refine what’s shown.
+      </p>
+
+      <div class="row">
+        <div class="col">
+          <div class="card" style="box-shadow:none">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-weight:800;margin-bottom:4px">Search options</div>
+                <div class="help">Changing these fetches a fresh set of results (page resets).</div>
+              </div>
+              <span class="pill">Search</span>
+            </div>
+
+            <!-- Output length: compact dropdown -->
+            <details class="details" style="margin-top:12px">
+              <summary>
+                <span style="font-weight:800">Output length</span>
+                <span class="pill" id="kBadge">k=18</span>
+              </summary>
+              <div class="details-body">
+                <div class="row" style="align-items:flex-end">
+                  <div class="col">
+                    <label class="help">Output length (k)</label>
+                    <select id="constructK" class="input">
+                      <option value="18" selected>18</option>
+                      <option value="19">19</option>
+                      <option value="20">20</option>
+                      <option value="21">21</option>
+                      <option value="22">22</option>
+                      <option value="23">23</option>
+                      <option value="24">24</option>
+                      <option value="25">25</option>
+                      <option value="26">26</option>
+                      <option value="27">27</option>
+                      <option value="28">28</option>
+                      <option value="29">29</option>
+                      <option value="30">30</option>
+                      <option value="31">31</option>
+                      <option value="32">32</option>
+                    </select>
+                    <div class="help" id="substringHint" style="margin-top:6px">Substring max length equals output k.</div>
+                  </div>
+                  <div class="col">
+                    <div class="help" style="font-weight:700">Notes</div>
+                    <div id="expandInfo" class="note" style="margin-top:6px"></div>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <div class="row" style="margin-top:12px">
+              <div class="col">
+                <label class="help">Sequence contains (optional)</label>
+                <input id="substring" class="input" placeholder="e.g., ACGTAC (leave empty for all)" />
+                <div style="display:flex;gap:12px;align-items:center;margin-top:6px">
+                  <div class="help">If empty, all barcodes match (subject to GC filter).</div>
+                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-left:auto">
+                    <input type="checkbox" id="revComp" />
+                    <span>Reverse complement</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px">
+              <div class="inline-fields" style="align-items:flex-end">
+                <div class="field" style="min-width:160px">
+                  <label class="help">GC% min</label>
+                  <input id="gcBackendMin" class="input" type="number" min="0" max="100" value="0" />
+                </div>
+                <div class="field" style="min-width:160px">
+                  <label class="help">GC% max</label>
+                  <input id="gcBackendMax" class="input" type="number" min="0" max="100" value="100" />
+                </div>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:12px">
+              <div class="col">
+                <label class="help">Page size</label>
+                <input id="pageSize" class="input" type="number" min="1" max="50000" value="200" />
+              </div>
+            </div>
+
+            <div class="toolbar" style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+              <button class="btn" id="run">Search (Page 1)</button>
+              <button class="btn secondary" id="prev" disabled>◀ Prev</button>
+              <button class="btn secondary" id="next" disabled>Next ▶</button>
+              <div class="page-pill" id="pagePill" style="display:none;gap:8px;align-items:center">
+                <select id="pageSelect" class="input" style="width:auto;min-width:110px;padding:10px 12px"></select>
+              </div>
+              <button class="btn secondary" id="clear">Clear</button>
+            </div>
+
+            <div id="backendChanged" class="note" style="margin-top:12px;display:none">
+              Search options changed. Click “Search (Page 1)” to fetch new results.
+            </div>
+
+            <div class="help" id="pageInfo" style="margin-top:10px"></div>
+            <div id="fetchNote" class="note" style="margin-top:12px;display:none"></div>
+          </div>
+        </div>
+
+        <!-- Filters moved below search options to keep the primary workflow full-width -->
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <details class="details" id="filtersDetails">
+        <summary>
+          <span style="font-weight:800">Filters & sorting (Current Page)</span>
+          <span class="help" id="filtersSummary">Optional</span>
+        </summary>
+        <div class="details-body">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div>
+              <div class="help">Refine barcodes on the current page. Nothing changes unless you apply.</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" id="applySort">Apply sort</button>
+              <button class="btn secondary" id="resetFilters">Reset</button>
+            </div>
+          </div>
+
+          <div class="filters-grid" style="margin-top:12px">
+        <div class="filters-group">
+          <label class="help">Barcode filter</label>
+          <input id="textFilter" class="input" placeholder="contains / exact / regex" />
+        </div>
+        <div class="filters-group">
+          <label class="help">Mode</label>
+          <select id="textMode" class="input">
+            <option value="contains">Contains</option>
+            <option value="exact">Exact</option>
+            <option value="regex">Regex</option>
+          </select>
+          <div class="help" id="regexHelp" style="margin-top:6px;display:none">Regex is case-insensitive.</div>
+        </div>
+
+        <div class="filters-group">
+          <label class="help">GC% min</label>
+          <input id="gcMin" class="input" type="number" min="0" max="100" placeholder="0" />
+        </div>
+        <div class="filters-group">
+          <label class="help">GC% max</label>
+          <input id="gcMax" class="input" type="number" min="0" max="100" placeholder="100" />
+        </div>
+
+        <div class="filters-group">
+          <label class="help">A min / max</label>
+          <div class="filters-inline">
+            <input id="aMin" class="input" type="number" min="0" placeholder="min" />
+            <input id="aMax" class="input" type="number" min="0" placeholder="max" />
+          </div>
+        </div>
+        <div class="filters-group">
+          <label class="help">C min / max</label>
+          <div class="filters-inline">
+            <input id="cMin" class="input" type="number" min="0" placeholder="min" />
+            <input id="cMax" class="input" type="number" min="0" placeholder="max" />
+          </div>
+        </div>
+        <div class="filters-group">
+          <label class="help">G min / max</label>
+          <div class="filters-inline">
+            <input id="gMin" class="input" type="number" min="0" placeholder="min" />
+            <input id="gMax" class="input" type="number" min="0" placeholder="max" />
+          </div>
+        </div>
+        <div class="filters-group">
+          <label class="help">T min / max</label>
+          <div class="filters-inline">
+            <input id="tMin" class="input" type="number" min="0" placeholder="min" />
+            <input id="tMax" class="input" type="number" min="0" placeholder="max" />
+          </div>
+        </div>
+
+        <div class="filters-group">
+          <label class="help">Sort by</label>
+          <select id="sortBy" class="input">
+            <option value="none" selected>As received (no sorting)</option>
+            <option value="kmer">Barcode</option>
+            <option value="gc">GC%</option>
+            <option value="A">A count</option>
+            <option value="C">C count</option>
+            <option value="G">G count</option>
+            <option value="T">T count</option>
+          </select>
+        </div>
+        <div class="filters-group">
+          <label class="help">Direction</label>
+          <select id="sortDir" class="input">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div id="results" style="margin-top:20px"></div>
+    <div class="footer">© 2025 barcodesDB</div>
+  </div>
+
+  <script>
+    const runBtn = document.getElementById('run');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const clearBtn = document.getElementById('clear');
+
+  // Search inputs
+    const constructKInp = document.getElementById('constructK');
+    const expandInfo = document.getElementById('expandInfo');
+    const kBadge = document.getElementById('kBadge');
+
+    const substringInp = document.getElementById('substring');
+    const substringHint = document.getElementById('substringHint');
+  const revCompChk = document.getElementById('revComp');
+
+    const gcBackendMin = document.getElementById('gcBackendMin');
+    const gcBackendMax = document.getElementById('gcBackendMax');
+    const pageSizeInp = document.getElementById('pageSize');
+
+    const backendChangedEl = document.getElementById('backendChanged');
+    const fetchNote = document.getElementById('fetchNote');
+    const pageInfo = document.getElementById('pageInfo');
+    const resultsEl = document.getElementById('results');
+
+  const pageSelect = document.getElementById('pageSelect');
+  const pagePill = document.getElementById('pagePill');
+
+    // Frontend filters
+  const filtersDetails = document.getElementById('filtersDetails');
+  const filtersSummary = document.getElementById('filtersSummary');
+  const applySortBtn = document.getElementById('applySort');
+  const resetFiltersBtn = document.getElementById('resetFilters');
+    const textFilter = document.getElementById('textFilter');
+    const textMode = document.getElementById('textMode');
+    const regexHelp = document.getElementById('regexHelp');
+
+    const gcMin = document.getElementById('gcMin');
+    const gcMax = document.getElementById('gcMax');
+
+    const aMin = document.getElementById('aMin');
+    const aMax = document.getElementById('aMax');
+    const cMin = document.getElementById('cMin');
+    const cMax = document.getElementById('cMax');
+    const gMin = document.getElementById('gMin');
+    const gMax = document.getElementById('gMax');
+    const tMin = document.getElementById('tMin');
+    const tMax = document.getElementById('tMax');
+
+    const sortBy = document.getElementById('sortBy');
+    const sortDir = document.getElementById('sortDir');
+
+    function showNote(el, msg) { el.style.display = 'block'; el.textContent = msg; }
+    function clearNote(el) { el.style.display = 'none'; el.textContent = ''; }
+
+    function isDNA(s) { return /^[ACGTacgt]+$/.test(s); }
+    function toNum(v) {
+      const s = String(v ?? '').trim();
+      if (!s) return null;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    }
+    function safeRegex(pattern) { try { return new RegExp(pattern, 'i'); } catch { return null; } }
+
+    function clampInt(x, lo, hi, fallback) {
+      const n = Math.floor(Number(x));
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(lo, Math.min(hi, n));
+    }
+
+    function updateExpandInfo() {
+      const kout = clampInt(constructKInp.value || '18', 18, 32, 18);
+      constructKInp.value = String(kout);
+      if (kBadge) kBadge.textContent = `k=${kout}`;
+      const d = kout - 18;
+      // unique expansions per 18-mer: (d+1)*4^d
+      // 4^d = 2^(2d)
+      const fourPow = Math.pow(4, d);
+      const perParent = (d + 1) * fourPow;
+      const pretty = (n) => n >= 1e9 ? (n/1e9).toFixed(2)+'B' : n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e3 ? (n/1e3).toFixed(2)+'K' : String(n);
+      expandInfo.textContent = d === 0
+        ? 'k=18 (no expansion).'
+        : `k=18 → k=${kout}: per 18-mer up to ${(pretty(perParent))} candidates (then filtered).`;
+      substringHint.textContent = `Substring is optional. Max length is output k=${kout}.`;
+    }
+
+  // ----- Paging cache state (per search) -----
+    // pages[i] = { cursorUsed, nextCursor, hasMore, results, kOut }
+    let queryKey = '';
+    let pages = [];
+    let pageIndex = -1;
+    let viewResults = [];
+
+    function makeQueryKey() {
+      const sub = substringInp.value.trim().toUpperCase();
+      const gmin = Math.floor(Number(gcBackendMin.value || 0));
+      const gmax = Math.floor(Number(gcBackendMax.value || 100));
+      const lim = Math.floor(Number(pageSizeInp.value || 200));
+      const kout = clampInt(constructKInp.value || '18', 18, 32, 18);
+      const rev = !!document.getElementById('revComp')?.checked;
+      return JSON.stringify({ kout, sub, gmin, gmax, lim, rev });
+    }
+
+    function setButtons() {
+      prevBtn.disabled = (pageIndex <= 0);
+      const cur = pages[pageIndex];
+      const hasCachedNext = pageIndex >= 0 && (pageIndex + 1) < pages.length;
+      const canFetchNext = cur && cur.hasMore && cur.nextCursor;
+      nextBtn.disabled = !(hasCachedNext || canFetchNext);
+
+      // page selector
+      if (pageSelect) {
+        if (pageIndex < 0) {
+          pageSelect.innerHTML = '<option value="">—</option>';
+          pageSelect.disabled = true;
+          if (pagePill) pagePill.style.display = 'none';
+        } else {
+          pageSelect.disabled = false;
+          const opts = [];
+          for (let i = 0; i < pages.length; i++) {
+            opts.push(`<option value="${i}">${i+1}</option>`);
+          }
+          pageSelect.innerHTML = opts.join('');
+          pageSelect.value = String(pageIndex);
+          if (pagePill) pagePill.style.display = (pages.length >= 2) ? 'flex' : 'none';
+        }
+      }
+
+      // mirrored dropdowns inside table
+      const syncPageSelect = (selectEl, pillEl) => {
+        if (!selectEl) return;
+        if (pageIndex < 0) {
+          selectEl.innerHTML = '<option value="">—</option>';
+          selectEl.disabled = true;
+          if (pillEl) pillEl.style.display = 'none';
+          return;
+        }
+        selectEl.disabled = false;
+        const opts = [];
+        for (let i = 0; i < pages.length; i++) opts.push(`<option value="${i}">${i+1}</option>`);
+        selectEl.innerHTML = opts.join('');
+        selectEl.value = String(pageIndex);
+        if (pillEl) pillEl.style.display = (pages.length >= 2) ? 'flex' : 'none';
+      };
+
+      syncPageSelect(document.getElementById('pageSelectTop'), document.getElementById('pagePillTop'));
+      syncPageSelect(document.getElementById('pageSelectBottom'), document.getElementById('pagePillBottom'));
+    }
+
+    function renderPageInfo() {
+      if (pageIndex < 0) { pageInfo.textContent = ''; return; }
+      const cur = pages[pageIndex];
+      const kout = cur?.kOut ?? clampInt(constructKInp.value || '18', 18, 32, 18);
+      const msg = [
+        `Output k=${kout}`,
+        `Page ${pageIndex + 1} of ${pages.length}`,
+        cur.hasMore ? 'More pages available.' : 'No more pages.',
+        'Filters apply to this page only.'
+      ].join(' • ');
+      pageInfo.textContent = msg;
+    }
+
+    function passesTextFilter(kmer) {
+      const q = textFilter.value.trim();
+      if (!q) return true;
+      const mode = textMode.value;
+      if (mode === 'exact') return kmer.toUpperCase() === q.toUpperCase();
+      if (mode === 'contains') return kmer.toUpperCase().includes(q.toUpperCase());
+      if (mode === 'regex') {
+        const re = safeRegex(q);
+        if (!re) return false;
+        return re.test(kmer);
+      }
+      return true;
+    }
+    function passesRange(val, minN, maxN) {
+      if (minN !== null && val < minN) return false;
+      if (maxN !== null && val > maxN) return false;
+      return true;
+    }
+
+    // Sorting is on-demand (applySort); filtering can still be live.
+    let sortApplied = false;
+
+    function updateFiltersSummary() {
+      const parts = [];
+      const q = textFilter.value.trim();
+      if (q) parts.push(`Barcode: ${textMode.value}`);
+      const gmin = toNum(gcMin.value);
+      const gmax = toNum(gcMax.value);
+      if (gmin !== null || gmax !== null) parts.push('GC range');
+      if ([aMin,aMax,cMin,cMax,gMin,gMax,tMin,tMax].some(el => String(el.value||'').trim())) parts.push('Composition');
+      if (sortApplied && sortBy.value !== 'none') parts.push(`Sorted`);
+      filtersSummary.textContent = parts.length ? parts.join(' • ') : 'Optional';
+    }
+
+    function applyFrontendFiltersAndSort() {
+      regexHelp.style.display = (textMode.value === 'regex') ? 'block' : 'none';
+      if (pageIndex < 0) return;
+
+      const page = pages[pageIndex];
+      const src = page.results || [];
+
+      const gcMinN = toNum(gcMin.value);
+      const gcMaxN = toNum(gcMax.value);
+
+      const aMinN = toNum(aMin.value), aMaxN = toNum(aMax.value);
+      const cMinN = toNum(cMin.value), cMaxN = toNum(cMax.value);
+      const gMinN = toNum(gMin.value), gMaxN = toNum(gMax.value);
+      const tMinN = toNum(tMin.value), tMaxN = toNum(tMax.value);
+
+      viewResults = src.filter(r => {
+        if (!passesTextFilter(r.kmer)) return false;
+        if (!passesRange(r.gc, gcMinN, gcMaxN)) return false;
+        const comp = r.comp || {};
+        if (!passesRange(comp.A ?? 0, aMinN, aMaxN)) return false;
+        if (!passesRange(comp.C ?? 0, cMinN, cMaxN)) return false;
+        if (!passesRange(comp.G ?? 0, gMinN, gMaxN)) return false;
+        if (!passesRange(comp.T ?? 0, tMinN, tMaxN)) return false;
+        return true;
+      });
+
+      // Keep original backend order unless the user explicitly applies sorting.
+      if (sortApplied && sortBy.value !== 'none') {
+        const key = sortBy.value;
+        const dir = sortDir.value === 'desc' ? -1 : 1;
+
+        viewResults.sort((x, y) => {
+          if (key === 'kmer') return dir * x.kmer.localeCompare(y.kmer);
+          if (key === 'gc') return dir * ((x.gc ?? 0) - (y.gc ?? 0));
+          const cx = x.comp || {}, cy = y.comp || {};
+          if (key === 'A') return dir * ((cx.A ?? 0) - (cy.A ?? 0));
+          if (key === 'C') return dir * ((cx.C ?? 0) - (cy.C ?? 0));
+          if (key === 'G') return dir * ((cx.G ?? 0) - (cy.G ?? 0));
+          if (key === 'T') return dir * ((cx.T ?? 0) - (cy.T ?? 0));
+          return 0;
+        });
+      }
+
+      renderTable();
+      renderPageInfo();
+      setButtons();
+      updateFiltersSummary();
+    }
+
+    function renderTable() {
+      const page = pages[pageIndex];
+      const shown = viewResults.length;
+      const totalFetched = pages.reduce((acc, p) => acc + (p?.results?.length || 0), 0);
+      const pageSize = clampInt(pageSizeInp.value || '200', 1, 50000, 200);
+
+      function downloadText(filename, text) {
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      function toTSV(rows) {
+        return rows.map(r => r.map(x => {
+          const s = String(x ?? '');
+          return s.includes('\t') || s.includes('\n') ? s.replace(/\t/g, ' ').replace(/\n/g, ' ') : s;
+        }).join('\t')).join('\n') + '\n';
+      }
+
+      const header = `
+        <div class="card" style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+            <div class="stat">
+              <div style="font-weight:800">Results</div>
+              <span class="pill">${totalFetched} records fetched</span>
+              <div class="help" style="margin-left:10px">Showing ${pageSize} / ${totalFetched} fetched (based on pages fetched)</div>
+            </div>
+            <div class="help">${page?.hasMore ? 'More pages available.' : 'No more pages.'}</div>
+          </div>
+
+          <div class="table-actions">
+            <div class="left">
+              <button class="btn secondary" id="prevTop" ${pageIndex <= 0 ? 'disabled' : ''}>◀ Prev</button>
+              <button class="btn secondary" id="nextTop" ${( (pageIndex + 1) < pages.length || (page?.hasMore && page?.nextCursor) ) ? '' : 'disabled'}>Next ▶</button>
+              <div class="page-pill" id="pagePillTop" style="display:none;gap:8px;align-items:center">
+                <select id="pageSelectTop" class="input" style="width:auto;min-width:110px;padding:10px 12px"></select>
+              </div>
+              <button class="btn secondary" id="clearTop">Clear</button>
+            </div>
+            <div class="right">
+              <button class="btn secondary" id="dlBtn">Download TSV</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      if (!shown && !(page?.results?.length || 0)) {
+        resultsEl.innerHTML = header + `<div class="card">No results on this page.</div>`;
+        return;
+      }
+
+      const rows = viewResults.map(r => {
+        const comp = r.comp || {A:0,C:0,G:0,T:0};
+        const gc = (r.gc ?? 0).toFixed(2);
+        return `
+          <tr>
+            <td class="kmer">${r.kmer}</td>
+            <td>${gc}</td>
+            <td>${comp.A ?? 0}</td>
+            <td>${comp.C ?? 0}</td>
+            <td>${comp.G ?? 0}</td>
+            <td>${comp.T ?? 0}</td>
+          </tr>
+        `;
+      }).join('');
+
+      resultsEl.innerHTML = header + `
+        <div class="card">
+          <div class="table-scroll" role="region" aria-label="Results table">
+            <table class="table" style="margin-top:0">
+              <thead>
+                <tr>
+                  <th>k-mer</th>
+                  <th>GC%</th>
+                  <th>A</th>
+                  <th>C</th>
+                  <th>G</th>
+                  <th>T</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows || `<tr><td colspan="6" class="help" style="padding:10px">No matches after filtering.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-actions" style="margin-top:14px">
+            <div class="left">
+              <button class="btn secondary" id="prevBottom" ${pageIndex <= 0 ? 'disabled' : ''}>◀ Prev</button>
+              <button class="btn secondary" id="nextBottom" ${( (pageIndex + 1) < pages.length || (page?.hasMore && page?.nextCursor) ) ? '' : 'disabled'}>Next ▶</button>
+              <div class="page-pill" id="pagePillBottom" style="display:none;gap:8px;align-items:center">
+                <select id="pageSelectBottom" class="input" style="width:auto;min-width:110px;padding:10px 12px"></select>
+              </div>
+              <button class="btn secondary" id="clearBottom">Clear</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Wire duplicated paging buttons + download
+      const byId = (id) => resultsEl.querySelector(`#${id}`);
+      const wireBtn = (id, handler) => {
+        const el = byId(id);
+        if (el) el.onclick = handler;
+      };
+
+      wireBtn('prevTop', () => prevBtn.click());
+      wireBtn('nextTop', () => nextBtn.click());
+      wireBtn('clearTop', () => clearBtn.click());
+
+      wireBtn('prevBottom', () => prevBtn.click());
+      wireBtn('nextBottom', () => nextBtn.click());
+      wireBtn('clearBottom', () => clearBtn.click());
+
+      // Wire duplicated page dropdowns (cached pages only)
+      const wireSelect = (id) => {
+        const el = byId(id);
+        if (!el) return;
+        el.onchange = () => {
+          const idx = Number(el.value);
+          if (Number.isFinite(idx)) goToPage(idx);
+        };
+      };
+      wireSelect('pageSelectTop');
+      wireSelect('pageSelectBottom');
+
+      const dlBtn = byId('dlBtn');
+      if (dlBtn) {
+        dlBtn.onclick = () => {
+          const src = (viewResults || []);
+          const rows = [
+            ['kmer', 'gc_pct', 'A', 'C', 'G', 'T'],
+            ...src.map(r => {
+              const comp = r.comp || {A:0,C:0,G:0,T:0};
+              const gc = (r.gc ?? 0);
+              return [r.kmer, Number(gc).toFixed(2), comp.A ?? 0, comp.C ?? 0, comp.G ?? 0, comp.T ?? 0];
+            })
+          ];
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+          downloadText(`barcodes_search_page${pageIndex+1}_${stamp}.tsv`, toTSV(rows));
+        };
+      }
+    }
+
+    async function fetchPageFromServer({ cursorUsed }) {
+      const substring = substringInp.value.trim();
+      const gcMinB = Math.floor(Number(gcBackendMin.value || 0));
+      const gcMaxB = Math.floor(Number(gcBackendMax.value || 100));
+      const limit = Math.floor(Number(pageSizeInp.value || 200));
+      const constructK = clampInt(constructKInp.value || '18', 18, 32, 18);
+
+      const body = {
+        constructK,
+        substring,        // optional (empty ok)
+        gcMin: gcMinB,
+        gcMax: gcMaxB,
+        limit
+      };
+      if (cursorUsed) body.cursor = cursorUsed;
+
+      // include reverse complement option where requested
+      const rev = !!document.getElementById('revComp')?.checked;
+      if (rev) body.reverse_complement = true;
+
+      const res = await fetch('/barcodesdb/api/query-substring', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+
+      return {
+        cursorUsed: data.cursorUsed || cursorUsed || '',
+        nextCursor: data.nextCursor || '',
+        hasMore: !!data.hasMore,
+        kOut: data.kOut || constructK,
+        results: Array.isArray(data.results) ? data.results : [],
+      };
+    }
+
+    async function runSearch() {
+      const kout = clampInt(constructKInp.value || '18', 18, 32, 18);
+
+      const substring = substringInp.value.trim();
+      if (substring && !isDNA(substring)) {
+        resultsEl.innerHTML = '<div class="note">Substring must be A/C/G/T only.</div>';
+        return;
+      }
+      if (substring && substring.length > kout) {
+        resultsEl.innerHTML = `<div class="note">Substring length must be ≤ ${kout}.</div>`;
+        return;
+      }
+
+      const gmin = Math.floor(Number(gcBackendMin.value || 0));
+      const gmax = Math.floor(Number(gcBackendMax.value || 100));
+      if (gmin < 0 || gmax > 100 || gmin > gmax) {
+        resultsEl.innerHTML = '<div class="note">GC range must satisfy 0 ≤ min ≤ max ≤ 100.</div>';
+        return;
+      }
+
+      const lim = Math.floor(Number(pageSizeInp.value || 200));
+      if (!Number.isFinite(lim) || lim < 1 || lim > 50000) {
+        resultsEl.innerHTML = '<div class="note">Page size must be between 1 and 50000.</div>';
+        return;
+      }
+
+      queryKey = makeQueryKey();
+      pages = [];
+      pageIndex = -1;
+      viewResults = [];
+
+      clearNote(fetchNote);
+      clearNote(backendChangedEl);
+
+      resultsEl.innerHTML = '<div class="card">Fetching page 1…</div>';
+      runBtn.disabled = true; prevBtn.disabled = true; nextBtn.disabled = true;
+
+      try {
+        const page1 = await fetchPageFromServer({ cursorUsed: '' });
+        pages.push(page1);
+        pageIndex = 0;
+
+        runBtn.disabled = false;
+        applyFrontendFiltersAndSort();
+      } catch (e) {
+        runBtn.disabled = false;
+        resultsEl.innerHTML = `<div class="note">${e.message}</div>`;
+      }
+    }
+
+    async function goNext() {
+      if (pageIndex < 0) return;
+
+      // cached?
+      if ((pageIndex + 1) < pages.length) {
+        pageIndex += 1;
+        clearNote(fetchNote);
+        applyFrontendFiltersAndSort();
+        return;
+      }
+
+      const cur = pages[pageIndex];
+      if (!cur || !cur.hasMore || !cur.nextCursor) return;
+
+      showNote(fetchNote, 'Fetching next page from server…');
+      runBtn.disabled = true; prevBtn.disabled = true; nextBtn.disabled = true;
+
+      try {
+        const nextPage = await fetchPageFromServer({ cursorUsed: cur.nextCursor });
+        pages.push(nextPage);
+        pageIndex += 1;
+
+        clearNote(fetchNote);
+        runBtn.disabled = false;
+        applyFrontendFiltersAndSort();
+      } catch (e) {
+        runBtn.disabled = false;
+        resultsEl.innerHTML = `<div class="note">${e.message}</div>`;
+      }
+    }
+
+    function goPrev() {
+      if (pageIndex <= 0) return;
+      pageIndex -= 1;
+      clearNote(fetchNote);
+      applyFrontendFiltersAndSort();
+    }
+
+    function goToPage(index) {
+      const i = Math.floor(Number(index));
+      if (!Number.isFinite(i)) return;
+      if (i < 0 || i >= pages.length) return;
+      pageIndex = i;
+      clearNote(fetchNote);
+      applyFrontendFiltersAndSort();
+    }
+
+    function resetFrontendFilters() {
+      textFilter.value = '';
+      textMode.value = 'contains';
+      gcMin.value = '';
+      gcMax.value = '';
+      aMin.value = ''; aMax.value = '';
+      cMin.value = ''; cMax.value = '';
+      gMin.value = ''; gMax.value = '';
+      tMin.value = ''; tMax.value = '';
+      sortBy.value = 'none';
+      sortDir.value = 'asc';
+      sortApplied = false;
+      regexHelp.style.display = 'none';
+      if (pageIndex >= 0) applyFrontendFiltersAndSort();
+    }
+
+    // Buttons
+    runBtn.onclick = runSearch;
+    nextBtn.onclick = goNext;
+    prevBtn.onclick = goPrev;
+
+    if (pageSelect) {
+      pageSelect.onchange = () => {
+        // Navigate among cached pages only.
+        const idx = Number(pageSelect.value);
+        if (Number.isFinite(idx)) goToPage(idx);
+      };
+    }
+
+    clearBtn.onclick = () => {
+      constructKInp.value = '18';
+      updateExpandInfo();
+
+      substringInp.value = '';
+      gcBackendMin.value = '0';
+      gcBackendMax.value = '100';
+      pageSizeInp.value = '200';
+
+      queryKey = '';
+      pages = [];
+      pageIndex = -1;
+      viewResults = [];
+      resultsEl.innerHTML = '';
+      pageInfo.textContent = '';
+
+      clearNote(fetchNote);
+      clearNote(backendChangedEl);
+
+      runBtn.disabled = false;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+
+      resetFrontendFilters();
+    };
+
+    // Frontend filter wiring
+    const frontendEls = [
+      textFilter, textMode, gcMin, gcMax,
+      aMin, aMax, cMin, cMax, gMin, gMax, tMin, tMax,
+      sortBy, sortDir
+    ];
+    for (const el of frontendEls) {
+      // Filters are live; sorting is only applied when the user clicks “Apply sort”.
+      el.addEventListener('input', () => { if (pageIndex >= 0) applyFrontendFiltersAndSort(); });
+      el.addEventListener('change', () => { if (pageIndex >= 0) applyFrontendFiltersAndSort(); });
+    }
+    resetFiltersBtn.onclick = resetFrontendFilters;
+
+    if (applySortBtn) {
+      applySortBtn.onclick = () => {
+        sortApplied = (sortBy.value !== 'none');
+        if (pageIndex >= 0) applyFrontendFiltersAndSort();
+      };
+    }
+
+    // Search option change detection (does not auto-fetch)
+  const searchEls = [constructKInp, substringInp, gcBackendMin, gcBackendMax, pageSizeInp, revCompChk];
+    for (const el of searchEls) {
+      el.addEventListener('input', () => { showNote(backendChangedEl, 'Search options changed. Click “Search (Page 1)” to fetch new results.'); });
+      el.addEventListener('change', () => { showNote(backendChangedEl, 'Search options changed. Click “Search (Page 1)” to fetch new results.'); });
+    }
+
+  // ConstructK UX
+  constructKInp.addEventListener('input', () => { updateExpandInfo(); });
+  constructKInp.addEventListener('change', () => { updateExpandInfo(); });
+
+    // Initial state
+    resetFrontendFilters();
+    updateExpandInfo();
+    updateFiltersSummary();
+  </script>
+</body>
+</html>
