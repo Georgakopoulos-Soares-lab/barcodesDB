@@ -50,6 +50,8 @@
                   <div class="col">
                     <label class="help">Output length (k)</label>
                     <select id="constructK" class="input">
+                      <option value="16">16</option>
+                      <option value="17">17</option>
                       <option value="18" selected>18</option>
                       <option value="19">19</option>
                       <option value="20">20</option>
@@ -301,18 +303,22 @@
     }
 
     function updateExpandInfo() {
-      const kout = clampInt(constructKInp.value || '18', 18, 32, 18);
+      const kout = clampInt(constructKInp.value || '18', 16, 32, 18);
       constructKInp.value = String(kout);
       if (kBadge) kBadge.textContent = `k=${kout}`;
-      const d = kout - 18;
-      // unique expansions per 18-mer: (d+1)*4^d
-      // 4^d = 2^(2d)
-      const fourPow = Math.pow(4, d);
-      const perParent = (d + 1) * fourPow;
       const pretty = (n) => n >= 1e9 ? (n/1e9).toFixed(2)+'B' : n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e3 ? (n/1e3).toFixed(2)+'K' : String(n);
-      expandInfo.textContent = d === 0
-        ? 'k=18 (no expansion).'
-        : `k=18 → k=${kout}: per 18-mer up to ${(pretty(perParent))} candidates (then filtered).`;
+
+      if (kout < 18) {
+        expandInfo.textContent = `k=${kout} (no expansion).`;
+      } else if (kout === 18) {
+        expandInfo.textContent = 'k=18 (no expansion).';
+      } else {
+        const d = kout - 18;
+        // unique expansions per 18-mer: (d+1)*4^d
+        const fourPow = Math.pow(4, d);
+        const perParent = (d + 1) * fourPow;
+        expandInfo.textContent = `k=18 → k=${kout}: per 18-mer up to ${(pretty(perParent))} candidates (then filtered).`;
+      }
       substringHint.textContent = `Substring is optional. Max length is output k=${kout}.`;
     }
 
@@ -328,7 +334,7 @@
       const gmin = Math.floor(Number(gcBackendMin.value || 0));
       const gmax = Math.floor(Number(gcBackendMax.value || 100));
       const lim = Math.floor(Number(pageSizeInp.value || 200));
-      const kout = clampInt(constructKInp.value || '18', 18, 32, 18);
+      const kout = clampInt(constructKInp.value || '18', 16, 32, 18);
       const rev = !!document.getElementById('revComp')?.checked;
       return JSON.stringify({ kout, sub, gmin, gmax, lim, rev });
     }

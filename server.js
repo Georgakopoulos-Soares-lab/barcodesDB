@@ -20,9 +20,24 @@ const BIN_QUERY_KMER = path.join(ROOT, 'query_kmer_bitmap');
 const BIN_QUERY_SUBSTR = path.join(ROOT, 'query_substring_bitmap_stream'); // sharded substring binary (updated)
 
 // Data
+const BITMAP_16 = path.join(ROOT, 'roar_barcodes_16.bin');
+const BITMAP_17 = path.join(ROOT, 'roar_barcodes_17.bin');
 const BITMAP_18 = path.join(ROOT, 'roar_barcodes_18.bin');
+
+const SHARDS_16 = path.join(ROOT, 'shards_16');
+const SHARDS_17 = path.join(ROOT, 'shards_17');
 const SHARDS_18 = path.join(ROOT, 'shards_18');
+
+const GC_HIST_16 = path.join(ROOT, 'gc_hist_shards_16.json');
+const GC_HIST_17 = path.join(ROOT, 'gc_hist_shards_17.json');
 const GC_HIST_18 = path.join(ROOT, 'gc_hist_shards_18.json'); // per-shard GC histogram
+
+function getShardsForK(k) {
+  if (k === 16) return { shards: SHARDS_16, gcHist: GC_HIST_16, baseK: 16 };
+  if (k === 17) return { shards: SHARDS_17, gcHist: GC_HIST_17, baseK: 17 };
+  // k==18 or expansion-from-18
+  return { shards: SHARDS_18, gcHist: GC_HIST_18, baseK: 18 };
+}
 
 function isDNA(s) {
   return /^[ACGTacgt]+$/.test(s);
@@ -123,10 +138,23 @@ app.post('/barcodesdb/api/query-kmer', upload.single('kmersFile'), async (req, r
       if (!isDNA(k)) return res.status(400).json({ error: `Invalid k-mer: ${k}` });
     }
 
+    // Enforce: this endpoint accepts a single k per request (no mixed k-mer lengths).
+    const ks = Array.from(new Set(uniq.map((s) => s.length)));
+    if (ks.length !== 1) {
+      return res.status(400).json({
+        error: `Mixed k-mer lengths are not supported. Found lengths: ${ks.sort((a,b)=>a-b).join(', ')}`,
+      });
+    }
+    const kReq = ks[0];
+    if (![16, 17, 18].includes(kReq)) {
+      return res.status(400).json({ error: `Only k=16, k=17, and k=18 are supported (got k=${kReq})` });
+    }
+
     const tmpFile = path.join(__dirname, 'uploads', `kmers_${Date.now()}.txt`);
     fs.writeFileSync(tmpFile, uniq.join('\n'));
 
-    const args = ['--bitmap', BITMAP_18, '--kmers', tmpFile];
+    const bitmapPath = (kReq === 16) ? BITMAP_16 : (kReq === 17) ? BITMAP_17 : BITMAP_18;
+    const args = ['--bitmap', bitmapPath, '--k', String(kReq), '--kmers', tmpFile];
     const { stdout } = await runBinary(BIN_QUERY_KMER, args, { timeoutMs: 120000 });
     fs.unlink(tmpFile, () => {});
 
@@ -165,17 +193,18 @@ app.post('/barcodesdb/api/query-substring', async (req, res) => {
       return res.status(400).json({ error: 'gcMin/gcMax must satisfy 0 <= gcMin <= gcMax <= 100' });
     }
 
-    // ConstructK: optional; if empty/null => default (k=18 in binary)
+    // ConstructK: optional; if empty/null => defaults to base-k (see below)
     const constructKRaw = (body.constructK === null || body.constructK === undefined) ? '' : String(body.constructK).trim();
     const constructK = constructKRaw ? Math.floor(Number(constructKRaw)) : null;
-    if (constructKRaw && (!Number.isFinite(constructK) || constructK < 18 || constructK > 32)) {
-      return res.status(400).json({ error: 'constructK must be an integer between 18 and 32' });
+    if (constructKRaw && (!Number.isFinite(constructK) || constructK < 16 || constructK > 32)) {
+      return res.status(400).json({ error: 'constructK must be an integer between 16 and 32' });
     }
 
     if (substring && !isDNA(substring)) {
       return res.status(400).json({ error: 'substring must be A/C/G/T only' });
     }
-    const maxSubLen = constructK || 18;
+    const kOut = constructK ?? 18;
+    const maxSubLen = kOut;
     if (substring && substring.length > maxSubLen) {
       return res.status(400).json({ error: `substring length must be <= ${maxSubLen}` });
     }
@@ -191,20 +220,30 @@ app.post('/barcodesdb/api/query-substring', async (req, res) => {
 
     const cursorUsed = (typeof body.cursor === 'string' && body.cursor.trim()) ? body.cursor.trim() : '';
 
-    if (!fs.existsSync(GC_HIST_18)) {
-      return res.status(500).json({ error: `GC histogram not found: ${GC_HIST_18}` });
+    // Decide shard base.
+    // Rules:
+    // - For requested kOut in {16,17,18} => use that exact shard set.
+    // - For kOut > 18 => expansion is only supported from 18-mer shards.
+    const baseK = (kOut > 18) ? 18 : kOut;
+    if (![16, 17, 18].includes(baseK)) {
+      return res.status(400).json({ error: 'Only k=16,17,18 are supported as base lengths' });
+    }
+    const { shards: shardsDir, gcHist: gcHist } = getShardsForK(baseK);
+
+    if (!fs.existsSync(gcHist)) {
+      return res.status(500).json({ error: `GC histogram not found: ${gcHist}` });
     }
 
     const args = [
-      '--shards', SHARDS_18,
-      '--gc-hist', GC_HIST_18,
+      '--shards', shardsDir,
+      '--gc-hist', gcHist,
       '--limit', String(pageSize),
       '--threads', String(threads),
       '--gc-min', String(gcMin),
       '--gc-max', String(gcMax),
       '--random_access',
     ];
-    if (constructK) args.push('--construct_k', String(constructK));
+    if (kOut) args.push('--construct_k', String(kOut));
     if (substring) args.push('--substring', substring);
     if (cursorUsed) args.push('--cursor', cursorUsed);
     if (body.reverse_complement) args.push('--reverse_complement');
@@ -223,14 +262,15 @@ app.post('/barcodesdb/api/query-substring', async (req, res) => {
       nextCursor: parsed.nextCursor || '',
       hasMore: !!parsed.hasMore,
       returned: parsed.returned ?? results.length,
-      kOut: parsed.kOut ?? constructK ?? 18,
+      kOut: parsed.kOut ?? kOut,
 
       // echo backend filter state
       substring,
       gcMin,
       gcMax,
       threads,
-      constructK: constructK ?? 18,
+      constructK: kOut,
+      baseK,
 
       results,
     });
