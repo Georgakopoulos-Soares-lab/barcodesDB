@@ -153,8 +153,8 @@ app.post('/barcodesdb/api/query-kmer', upload.single('kmersFile'), async (req, r
     const tmpFile = path.join(__dirname, 'uploads', `kmers_${Date.now()}.txt`);
     fs.writeFileSync(tmpFile, uniq.join('\n'));
 
-    const bitmapPath = (kReq === 16) ? BITMAP_16 : (kReq === 17) ? BITMAP_17 : BITMAP_18;
-    const args = ['--bitmap', bitmapPath, '--k', String(kReq), '--kmers', tmpFile];
+    const { shards: shardsDir } = getShardsForK(kReq);
+    const args = ['--shards', shardsDir, '--k', String(kReq), '--kmers', tmpFile];
     const { stdout } = await runBinary(BIN_QUERY_KMER, args, { timeoutMs: 120000 });
     fs.unlink(tmpFile, () => {});
 
