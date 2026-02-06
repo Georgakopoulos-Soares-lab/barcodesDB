@@ -35,7 +35,7 @@ barcodesDB is a web application designed for researchers and bioinformaticians w
 
 barcodesDB relies on two primary C++ programs:
 
-- **gen_kmer_bitmap**: Generates k-mer existence bitmaps with configurable density and reproducible random sampling
+- **query_kmer_bitmap**: Performs batch k-mer existence queries against sharded bitmaps, with multithreaded processing and efficient lookups
 - **query_substring_bitmap_stream**: Performs substring queries with support for GC filtering, expansion, and multithreaded processing
 
 ## Usage
@@ -54,16 +54,16 @@ CXXFLAGS = -O3 -march=native -flto -std=c++17 -pthread -lm
 ROARING_INCLUDE = /usr/local/include
 ROARING_LIB = /usr/local/lib/libroaring.a
 
-all: gen_kmer_bitmap query_substring_bitmap_stream
+all: query_kmer_bitmap query_substring_bitmap_stream
 
-gen_kmer_bitmap: gen_kmer_bitmap.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $<
+query_kmer_bitmap: query_kmer_bitmap.cpp
+	$(CXX) $(CXXFLAGS) -I$(ROARING_INCLUDE) $< $(ROARING_LIB) -o $@
 
 query_substring_bitmap_stream: query_substring_bitmap_stream.cpp
 	$(CXX) $(CXXFLAGS) -I$(ROARING_INCLUDE) $< $(ROARING_LIB) -o $@
 
 clean:
-	rm -f gen_kmer_bitmap query_substring_bitmap_stream
+	rm -f query_kmer_bitmap query_substring_bitmap_stream
 ```
 
 Run `make` to build the executables.</content>
