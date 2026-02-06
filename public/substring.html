@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>barcodesDB • Search barcodes</title>
-  <link rel="stylesheet" href="/barcodesdb/style.css" />
-  <script defer src="/barcodesdb/common.js"></script>
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/common.js"></script>
 </head>
 <body>
   <div class="container">
@@ -16,9 +16,9 @@
         <span class="badge">Search barcodes</span>
       </div>
       <nav class="nav">
-        <a href="/barcodesdb/">Home</a>
-        <a href="/barcodesdb/kmer">K-mer Lookup</a>
-        <a class="active" href="/barcodesdb/substring">Search barcodes</a>
+        <a href="/">Home</a>
+        <a href="/kmer">K-mer Lookup</a>
+        <a class="active" href="/substring">Search barcodes</a>
       </nav>
     </div>
 
@@ -650,7 +650,7 @@
       const rev = !!document.getElementById('revComp')?.checked;
       if (rev) body.reverse_complement = true;
 
-      const res = await fetch('/barcodesdb/api/query-substring', {
+      const res = await fetch('/api/query-substring', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

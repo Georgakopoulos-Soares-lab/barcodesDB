@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>barcodesDB • K-mer Lookup</title>
-  <link rel="stylesheet" href="/barcodesdb/style.css" />
-  <script defer src="/barcodesdb/common.js"></script>
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/common.js"></script>
 </head>
 <body>
   <div class="container">
@@ -16,9 +16,9 @@
         <span class="badge">K-mer Lookup</span>
       </div>
       <nav class="nav">
-        <a href="/barcodesdb/">Home</a>
-        <a class="active" href="/barcodesdb/kmer">K-mer Lookup</a>
-        <a href="/barcodesdb/substring">Search barcodes</a>
+        <a href="/">Home</a>
+        <a class="active" href="/kmer">K-mer Lookup</a>
+        <a href="/substring">Search barcodes</a>
       </nav>
     </div>
 
@@ -63,10 +63,10 @@
         if (hasFile) {
           const fd = new FormData();
           fd.append('kmersFile', fileInp.files[0]);
-          res = await fetch('/barcodesdb/api/query-kmer', { method: 'POST', body: fd });
+          res = await fetch('/api/query-kmer', { method: 'POST', body: fd });
         } else if (hasText) {
           const kmers = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-          res = await fetch('/barcodesdb/api/query-kmer', {
+          res = await fetch('/api/query-kmer', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ kmers })
           });

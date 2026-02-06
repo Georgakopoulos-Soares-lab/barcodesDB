@@ -121,7 +121,7 @@ app.use('/barcodesdb', express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '5mb' }));
 
 // /api/query-kmer (unchanged)
-app.post('/barcodesdb/api/query-kmer', upload.single('kmersFile'), async (req, res) => {
+app.post('/api/query-kmer', upload.single('kmersFile'), async (req, res) => {
   try {
     let kmers = [];
     if (req.file) {
@@ -181,7 +181,7 @@ app.post('/barcodesdb/api/query-kmer', upload.single('kmersFile'), async (req, r
 });
 
 // /api/query-substring (backend filters: substring optional + gc range required + optional constructK)
-app.post('/barcodesdb/api/query-substring', async (req, res) => {
+app.post('/api/query-substring', async (req, res) => {
   try {
     const body = req.body || {};
     const substringRaw = (typeof body.substring === 'string') ? body.substring.trim() : '';
@@ -281,9 +281,9 @@ app.post('/barcodesdb/api/query-substring', async (req, res) => {
 });
 
 // Pages
-app.get('/barcodesdb', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/barcodesdb/kmer', (req, res) => res.sendFile(path.join(__dirname, 'public', 'kmer.html')));
-app.get('/barcodesdb/substring', (req, res) => res.sendFile(path.join(__dirname, 'public', 'substring.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/kmer', (req, res) => res.sendFile(path.join(__dirname, 'public', 'kmer.html')));
+app.get('/substring', (req, res) => res.sendFile(path.join(__dirname, 'public', 'substring.html')));
 
 const PORT = process.env.PORT || 8090;
 const server = app.listen(PORT, () => {
