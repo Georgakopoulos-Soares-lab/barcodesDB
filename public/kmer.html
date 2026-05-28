@@ -19,6 +19,7 @@
         <a href="/">Home</a>
         <a class="active" href="/kmer">K-mer Lookup</a>
         <a href="/substring">Search barcodes</a>
+        <a href="/generate">Generate barcodes</a>
       </nav>
     </div>
 
@@ -32,6 +33,62 @@
         <div class="col">
           <input class="input" type="file" id="file" accept=".txt" />
           <div class="help">Plain text; one k-mer per line.</div>
+          <div style="margin-top:12px">
+            <label for="minHamming" style="font-weight:600;font-size:0.9em;display:block;margin-bottom:4px">Minimum Hamming distance</label>
+            <input class="input" type="number" id="minHamming" min="0" max="18" value="0" style="width:100px" />
+            <div class="help">Optional. Reports whether the queried barcode is at least this many substitutions away from matched same-length sequences.</div>
+          </div>
+
+          <!-- Optional sequence filters -->
+          <details class="details" style="margin-top:14px" id="motifDetails">
+            <summary>
+              <span style="font-weight:800">Optional sequence filters</span>
+              <span class="help" id="motifSummary">Off</span>
+            </summary>
+            <div class="details-body">
+              <p class="help" style="margin-bottom:12px">Optional sequence-level filters can flag or exclude barcodes containing simple short motifs such as homopolymer runs, low-complexity repeats, common restriction enzyme sites, and selected functional-like motifs. These filters do not guarantee functional neutrality and are not organism-specific. For exact k-mer lookup, filters only annotate the queried sequence — they do not alter the present/absent result.</p>
+
+              <div class="field" style="margin-bottom:12px">
+                <label class="help" style="font-weight:700">Motif mode</label>
+                <select id="motifMode" class="input" style="width:180px">
+                  <option value="off" selected>Off</option>
+                  <option value="flag">Flag only</option>
+                  <option value="exclude">Exclude (annotate)</option>
+                </select>
+                <div class="help">For exact lookup, "Exclude" annotates sequences that would be excluded from candidate outputs but does not hide the lookup result.</div>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterHomopolymers" />
+                <label for="filterHomopolymers" style="font-weight:600;font-size:0.9em">Filter homopolymers</label>
+                <label class="help">Max run length:</label>
+                <input class="input" type="number" id="maxHomopolymer" min="1" max="20" value="4" style="width:70px" />
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterLowComplexity" />
+                <label for="filterLowComplexity" style="font-weight:600;font-size:0.9em">Filter low-complexity sequences</label>
+                <label class="help">Min Shannon entropy:</label>
+                <input class="input" type="number" id="minShannonEntropy" min="0" max="2" step="0.1" value="1.5" style="width:70px" />
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterDinuclRepeats" />
+                <label for="filterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterRestrictionSites" />
+                <label for="filterRestrictionSites" style="font-weight:600;font-size:0.9em">Filter common restriction sites</label>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterFunctionalMotifs" />
+                <label for="filterFunctionalMotifs" style="font-weight:600;font-size:0.9em">Flag short functional-like motifs</label>
+              </div>
+            </div>
+          </details>
+
           <div style="margin-top:12px;display:flex;gap:10px">
             <button class="btn" id="run">Run Query</button>
             <button class="btn secondary" id="clear">Clear</button>
@@ -49,26 +106,76 @@
     const clearBtn = document.getElementById('clear');
     const fileInp = document.getElementById('file');
     const kmersTA = document.getElementById('kmers');
+    const minHammingInp = document.getElementById('minHamming');
     const results = document.getElementById('results');
 
     clearBtn.onclick = () => { kmersTA.value=''; fileInp.value=''; results.innerHTML=''; };
+
+    function updateMotifSummary() {
+      const mode = document.getElementById('motifMode')?.value || 'off';
+      const summary = document.getElementById('motifSummary');
+      if (!summary) return;
+      if (mode === 'off') { summary.textContent = 'Off'; return; }
+      const parts = [mode === 'flag' ? 'Flag' : 'Exclude'];
+      if (document.getElementById('filterHomopolymers')?.checked) parts.push('Homopolymers');
+      if (document.getElementById('filterLowComplexity')?.checked) parts.push('Low complexity');
+      if (document.getElementById('filterDinuclRepeats')?.checked) parts.push('Dinucleotide repeats');
+      if (document.getElementById('filterRestrictionSites')?.checked) parts.push('Restriction sites');
+      if (document.getElementById('filterFunctionalMotifs')?.checked) parts.push('Functional motifs');
+      summary.textContent = parts.join(' + ');
+    }
+
+    // Wire motif filter update
+    const motifEls = ['motifMode', 'filterHomopolymers', 'maxHomopolymer',
+      'filterLowComplexity', 'minShannonEntropy', 'filterDinuclRepeats',
+      'filterRestrictionSites', 'filterFunctionalMotifs'];
+    for (const id of motifEls) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      el.addEventListener('input', updateMotifSummary);
+      el.addEventListener('change', updateMotifSummary);
+    }
 
     runBtn.onclick = async () => {
       results.innerHTML = '<div class="card">Running…</div>';
       const text = kmersTA.value.trim();
       const hasText = !!text;
       const hasFile = fileInp.files && fileInp.files[0];
+      const minHamming = parseInt(minHammingInp.value, 10) || 0;
+
+      // Collect motif filter options
+      const motifMode = document.getElementById('motifMode')?.value || 'off';
+      const motifBody = {};
+      if (motifMode !== 'off') {
+        motifBody.motif_mode = motifMode;
+        if (document.getElementById('filterHomopolymers')?.checked) {
+          motifBody.filter_homopolymers = true;
+          motifBody.max_homopolymer = parseInt(document.getElementById('maxHomopolymer')?.value, 10) || 4;
+        }
+        if (document.getElementById('filterLowComplexity')?.checked) {
+          motifBody.filter_low_complexity = true;
+          motifBody.min_shannon_entropy = parseFloat(document.getElementById('minShannonEntropy')?.value) || 1.5;
+        }
+        if (document.getElementById('filterDinuclRepeats')?.checked) motifBody.filter_dinucleotide_repeats = true;
+        if (document.getElementById('filterRestrictionSites')?.checked) motifBody.filter_restriction_sites = true;
+        if (document.getElementById('filterFunctionalMotifs')?.checked) motifBody.filter_functional_motifs = true;
+      }
+
       try {
         let res;
         if (hasFile) {
           const fd = new FormData();
           fd.append('kmersFile', fileInp.files[0]);
+          fd.append('min_hamming_distance', String(minHamming));
+          // Append motif filter fields to FormData
+          for (const [k, v] of Object.entries(motifBody)) fd.append(k, String(v));
           res = await fetch('/api/query-kmer', { method: 'POST', body: fd });
         } else if (hasText) {
           const kmers = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+          const body = { kmers, min_hamming_distance: minHamming, ...motifBody };
           res = await fetch('/api/query-kmer', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ kmers })
+            body: JSON.stringify(body)
           });
         } else {
           results.innerHTML = '<div class="card">Please provide k-mers or upload a file.</div>';

@@ -39,6 +39,99 @@ function getShardsForK(k) {
   return { shards: SHARDS_18, gcHist: GC_HIST_18, baseK: 18 };
 }
 
+/**
+ * Parse and sanitize motif filter options from a request body.
+ * All filters default to off. Returns a clean options object.
+ */
+function parseMotifOptions(body) {
+  const opts = {
+    motif_mode: 'off',
+    filter_homopolymers: false,
+    max_homopolymer: 4,
+    filter_low_complexity: false,
+    min_shannon_entropy: 1.5,
+    filter_dinucleotide_repeats: false,
+    filter_trinucleotide_repeats: false,
+    filter_tetranucleotide_repeats: false,
+    filter_restriction_sites: false,
+    filter_functional_motifs: false,
+  };
+
+  if (!body) return opts;
+
+  // motif_mode: must be one of "off", "flag", "exclude"
+  const modeRaw = String(body.motif_mode || 'off').trim().toLowerCase();
+  if (['off', 'flag', 'exclude'].includes(modeRaw)) {
+    opts.motif_mode = modeRaw;
+  }
+
+  // Booleans: accept true/false, "true"/"false", "1"/"0"
+  function toBool(v) {
+    if (v === true || v === 'true' || v === '1' || v === 1) return true;
+    return false;
+  }
+
+  opts.filter_homopolymers = toBool(body.filter_homopolymers);
+  opts.filter_low_complexity = toBool(body.filter_low_complexity);
+  opts.filter_dinucleotide_repeats = toBool(body.filter_dinucleotide_repeats);
+  opts.filter_trinucleotide_repeats = toBool(body.filter_trinucleotide_repeats);
+  opts.filter_tetranucleotide_repeats = toBool(body.filter_tetranucleotide_repeats);
+  opts.filter_restriction_sites = toBool(body.filter_restriction_sites);
+  opts.filter_functional_motifs = toBool(body.filter_functional_motifs);
+
+  // max_homopolymer: default 4, minimum 1
+  if (body.max_homopolymer !== undefined && body.max_homopolymer !== null && body.max_homopolymer !== '') {
+    const v = parseInt(String(body.max_homopolymer), 10);
+    if (!isNaN(v) && v >= 1) opts.max_homopolymer = v;
+  }
+
+  // min_shannon_entropy: default 1.5, clamp between 0 and 2
+  if (body.min_shannon_entropy !== undefined && body.min_shannon_entropy !== null && body.min_shannon_entropy !== '') {
+    const v = parseFloat(String(body.min_shannon_entropy));
+    if (!isNaN(v)) opts.min_shannon_entropy = Math.max(0, Math.min(2, v));
+  }
+
+  return opts;
+}
+
+/**
+ * Append CLI args for motif filters to the given args array.
+ * Only adds args when they differ from defaults or are enabled.
+ */
+function appendMotifArgs(args, opts) {
+  if (!opts || opts.motif_mode === 'off') return;
+
+  args.push('--motif-mode', opts.motif_mode);
+
+  if (opts.filter_homopolymers) {
+    args.push('--filter-homopolymers');
+    if (opts.max_homopolymer !== 4) {
+      args.push('--max-homopolymer', String(opts.max_homopolymer));
+    }
+  }
+  if (opts.filter_low_complexity) {
+    args.push('--filter-low-complexity');
+    if (Math.abs(opts.min_shannon_entropy - 1.5) > 0.001) {
+      args.push('--min-shannon-entropy', String(opts.min_shannon_entropy));
+    }
+  }
+  if (opts.filter_dinucleotide_repeats) {
+    args.push('--filter-dinucleotide-repeats');
+  }
+  if (opts.filter_trinucleotide_repeats) {
+    args.push('--filter-trinucleotide-repeats');
+  }
+  if (opts.filter_tetranucleotide_repeats) {
+    args.push('--filter-tetranucleotide-repeats');
+  }
+  if (opts.filter_restriction_sites) {
+    args.push('--filter-restriction-sites');
+  }
+  if (opts.filter_functional_motifs) {
+    args.push('--filter-functional-motifs');
+  }
+}
+
 function isDNA(s) {
   return /^[ACGTacgt]+$/.test(s);
 }
@@ -97,12 +190,12 @@ function runBinary(cmd, args, { stdinData, timeoutMs }) {
 function parseSubstringStdout(stdout) {
   const lines = stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
   if (!lines.length) {
-    return { nextCursor: '', hasMore: false, returned: 0, kOut: null, kmers: [] };
+    return { nextCursor: '', hasMore: false, returned: 0, kOut: null, kmers: [], motifMeta: null };
   }
 
   const meta = lines[0];
   if (!meta.startsWith('__META__')) {
-    return { nextCursor: '', hasMore: false, returned: lines.length, kOut: null, kmers: lines };
+    return { nextCursor: '', hasMore: false, returned: lines.length, kOut: null, kmers: lines, motifMeta: null };
   }
 
   const parts = meta.split('\t');
@@ -111,8 +204,20 @@ function parseSubstringStdout(stdout) {
   const returned = Number(parts[3] ?? lines.length - 1) || (lines.length - 1);
   const kOut = Number(parts[4] ?? '') || null;
 
+  // Parse extended __META__ fields (key=value pairs)
+  const motifMeta = {};
+  for (let i = 5; i < parts.length; i++) {
+    const kv = parts[i].trim();
+    const eq = kv.indexOf('=');
+    if (eq > 0) {
+      const key = kv.substring(0, eq);
+      const val = kv.substring(eq + 1);
+      motifMeta[key] = val;
+    }
+  }
+
   const kmers = lines.slice(1);
-  return { nextCursor, hasMore, returned, kOut, kmers };
+  return { nextCursor, hasMore, returned, kOut, kmers, motifMeta };
 }
 
 // app.use(express.static(path.join(__dirname, 'public')));
@@ -121,7 +226,7 @@ app.use('/', express.static(path.join(__dirname, 'public')));
 
 app.use(express.json({ limit: '5mb' }));
 
-// /api/query-kmer (unchanged)
+// /api/query-kmer
 app.post('/api/query-kmer', upload.single('kmersFile'), async (req, res) => {
   try {
     let kmers = [];
@@ -151,30 +256,106 @@ app.post('/api/query-kmer', upload.single('kmersFile'), async (req, res) => {
       return res.status(400).json({ error: `Only k=16, k=17, and k=18 are supported (got k=${kReq})` });
     }
 
+    // Parse optional min_hamming_distance
+    let minHamming = 0;
+    if (req.body.min_hamming_distance !== undefined && req.body.min_hamming_distance !== null && req.body.min_hamming_distance !== '') {
+      minHamming = parseInt(String(req.body.min_hamming_distance), 10);
+      if (isNaN(minHamming) || minHamming < 0) minHamming = 0;
+      if (minHamming > kReq) minHamming = kReq;
+    }
+
+    // Parse optional motif filter parameters
+    const motifOpts = parseMotifOptions(req.body);
+
     const tmpFile = path.join(__dirname, 'uploads', `kmers_${Date.now()}.txt`);
     fs.writeFileSync(tmpFile, uniq.join('\n'));
 
     const { shards: shardsDir } = getShardsForK(kReq);
     const args = ['--shards', shardsDir, '--k', String(kReq), '--kmers', tmpFile];
+    if (minHamming > 0) {
+      args.push('--min-hamming-distance', String(minHamming));
+    }
+    // Add motif filter args
+    appendMotifArgs(args, motifOpts);
+
     const { stdout } = await runBinary(BIN_QUERY_KMER, args, { timeoutMs: 120000 });
     fs.unlink(tmpFile, () => {});
 
     const results = [];
     let foundCount = 0;
+    let hammingCheckApplied = (minHamming > 0);
+    let overallPassesMinHamming = true;
+    let overallNearestHamming = Infinity;
+    let motifApplied = (motifOpts.motif_mode !== 'off');
+    let motifFailCount = 0;
     for (const line of stdout.split(/\r?\n/)) {
       if (!line) continue;
-      const [kmer, hit] = line.split('\t');
+      const parts = line.split('\t');
+      const kmer = parts[0];
+      const hit = parts[1];
       const present = hit === '1';
       if (present) foundCount++;
-      results.push({ kmer, present, gc: gcContent(kmer), comp: ntComp(kmer) });
+
+      const result = { kmer, present, gc: gcContent(kmer), comp: ntComp(kmer) };
+
+      if (hammingCheckApplied && parts.length >= 4) {
+        const nearestStr = parts[2];
+        const passesStr = parts[3];
+        const nearest = nearestStr ? parseInt(nearestStr, 10) : -1;
+        const passes = passesStr === '1';
+        if (nearest >= 0) {
+          result.nearest_hamming_distance_observed = nearest;
+          result.passes_min_hamming_distance = passes;
+          if (nearest < overallNearestHamming) overallNearestHamming = nearest;
+          if (!passes) overallPassesMinHamming = false;
+        }
+      }
+
+      // Parse motif metadata (appended after hamming columns if both present)
+      const motifOffset = hammingCheckApplied ? 4 : 2; // after kmer + present + optional hamming cols
+      if (motifApplied && parts.length >= motifOffset + 3) {
+        const motifPasses = parts[motifOffset] === '1';
+        const motifHitCount = parseInt(parts[motifOffset + 1], 10) || 0;
+        const motifHitsStr = parts[motifOffset + 2] || '';
+        result.motif_passes = motifPasses;
+        result.motif_hit_count = motifHitCount;
+        result.motif_hits = motifHitsStr;
+        if (!motifPasses) motifFailCount++;
+      }
+
+      results.push(result);
     }
 
-    res.json({
+    const response = {
       total: results.length,
       found: foundCount,
       foundPct: results.length ? (foundCount * 100.0) / results.length : 0,
       results,
-    });
+    };
+
+    if (hammingCheckApplied) {
+      response.min_hamming_distance_requested = minHamming;
+      response.hamming_distance_check_applied = true;
+      response.passes_min_hamming_distance = overallPassesMinHamming;
+      response.nearest_hamming_distance_observed = overallNearestHamming < Infinity ? overallNearestHamming : null;
+    }
+
+    if (motifApplied) {
+      response.motif_filter_applied = true;
+      response.motif_mode = motifOpts.motif_mode;
+      response.motif_fail_count = motifFailCount;
+      response.motif_options = {
+        filter_homopolymers: motifOpts.filter_homopolymers || false,
+        max_homopolymer: motifOpts.max_homopolymer,
+        filter_low_complexity: motifOpts.filter_low_complexity || false,
+        min_shannon_entropy: motifOpts.min_shannon_entropy,
+        filter_dinucleotide_repeats: motifOpts.filter_dinucleotide_repeats || false,
+        filter_restriction_sites: motifOpts.filter_restriction_sites || false,
+        filter_functional_motifs: motifOpts.filter_functional_motifs || false,
+      };
+    }
+
+    res.json(response);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: String(err.message || err) });
@@ -221,6 +402,9 @@ app.post('/api/query-substring', async (req, res) => {
 
     const cursorUsed = (typeof body.cursor === 'string' && body.cursor.trim()) ? body.cursor.trim() : '';
 
+    // Parse optional motif filter parameters
+    const motifOpts = parseMotifOptions(body);
+
     // Decide shard base.
     // Rules:
     // - For requested kOut in {16,17,18} => use that exact shard set.
@@ -249,6 +433,9 @@ app.post('/api/query-substring', async (req, res) => {
     if (cursorUsed) args.push('--cursor', cursorUsed);
     if (body.reverse_complement) args.push('--reverse_complement');
 
+    // Add motif filter args
+    appendMotifArgs(args, motifOpts);
+
     const { stdout } = await runBinary(BIN_QUERY_SUBSTR, args, { timeoutMs: 2 * 60 * 1000 });
     const parsed = parseSubstringStdout(stdout);
 
@@ -273,7 +460,83 @@ app.post('/api/query-substring', async (req, res) => {
       constructK: kOut,
       baseK,
 
+      // motif filter metadata
+      motifMeta: parsed.motifMeta && Object.keys(parsed.motifMeta).length > 0 ? {
+        motif_filter_applied: parsed.motifMeta.motif_filter_applied === '1',
+        motif_mode: parsed.motifMeta.motif_mode || 'off',
+        motif_filtered_count: parseInt(parsed.motifMeta.motif_filtered_count, 10) || 0,
+        returned_count: parseInt(parsed.motifMeta.returned_count, 10) || results.length,
+      } : undefined,
+
       results,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: String(err.message || err) });
+  }
+});
+
+// /api/generate-random-kmers — Generate random DNA k-mers matching criteria
+// This does NOT query the bitmap. Users can generate barcodes independently.
+app.post('/api/generate-random-kmers', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const k = parseInt(String(body.k || 18), 10);
+    const n = parseInt(String(body.n ?? 10), 10);
+    const gcMin = parseInt(String(body.gc_min || 0), 10);
+    const gcMax = parseInt(String(body.gc_max || 100), 10);
+    const substring = (typeof body.substring === 'string') ? body.substring.trim().toUpperCase() : '';
+
+    // Validate
+    if (isNaN(k) || k < 4 || k > 32) {
+      return res.status(400).json({ error: 'k must be an integer between 4 and 32' });
+    }
+    if (isNaN(n) || n < 1 || n > 10000) {
+      return res.status(400).json({ error: 'n must be between 1 and 10000' });
+    }
+    if (gcMin < 0 || gcMax > 100 || gcMin > gcMax) {
+      return res.status(400).json({ error: 'gc_min/gc_max must satisfy 0 <= gc_min <= gc_max <= 100' });
+    }
+    if (substring && !isDNA(substring)) {
+      return res.status(400).json({ error: 'substring must be A/C/G/T only' });
+    }
+    if (substring && substring.length > k) {
+      return res.status(400).json({ error: 'substring length must be <= k' });
+    }
+
+    const bases = ['A', 'C', 'G', 'T'];
+    const results = [];
+    const MAX_ATTEMPTS = n * 200;  // safety limit
+    let attempts = 0;
+
+    while (results.length < n && attempts < MAX_ATTEMPTS) {
+      attempts++;
+      // Generate a random k-mer
+      let kmer = '';
+      for (let i = 0; i < k; i++) {
+        kmer += bases[Math.floor(Math.random() * 4)];
+      }
+      // Check GC%
+      const gc = gcContent(kmer);
+      if (gc < gcMin || gc > gcMax) continue;
+      // Check substring (if specified)
+      if (substring && !kmer.includes(substring)) continue;
+      results.push(kmer);
+    }
+
+    res.json({
+      k,
+      n_requested: n,
+      n_returned: results.length,
+      gc_min: gcMin,
+      gc_max: gcMax,
+      substring: substring || null,
+      attempts,
+      results: results.map(kmer => ({
+        kmer,
+        gc: gcContent(kmer),
+        comp: ntComp(kmer),
+      })),
     });
   } catch (err) {
     console.error(err);
@@ -285,6 +548,7 @@ app.post('/api/query-substring', async (req, res) => {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/kmer', (req, res) => res.sendFile(path.join(__dirname, 'public', 'kmer.html')));
 app.get('/substring', (req, res) => res.sendFile(path.join(__dirname, 'public', 'substring.html')));
+app.get('/generate', (req, res) => res.sendFile(path.join(__dirname, 'public', 'generate.html')));
 
 const PORT = process.env.PORT || 8090;
 const server = app.listen(PORT, () => {

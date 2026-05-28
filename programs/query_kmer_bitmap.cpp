@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <roaring/roaring64.h>
+#include "motif_filters.hpp"
 
 struct Args {
   // Sharded mode
@@ -33,12 +34,23 @@ struct Args {
   std::string out;    // optional
 
   int threads = 4;
+  int min_hamming_distance = 0;
+
+  // Motif filter options (all off by default)
+  MotifFilterOptions motif_opts;
 };
 
 static void usage(const char* prog) {
   std::cerr << "Usage: " << prog
             << " --shards <dir> [--k 16|17|18] [--kmers <file>] [--out <file>]"
-            << " [--threads N]\n";
+            << " [--threads N]\n"
+            << "  Motif filters (all off by default):\n"
+            << "    --motif-mode <off|flag|exclude>\n"
+            << "    --filter-homopolymers  --max-homopolymer <int> (default 4)\n"
+            << "    --filter-low-complexity --min-shannon-entropy <float> (default 1.5)\n"
+            << "    --filter-dinucleotide-repeats\n"
+            << "    --filter-restriction-sites\n"
+            << "    --filter-functional-motifs\n";
 }
 
 static bool parse_args(int argc, char** argv, Args& a) {
@@ -49,7 +61,16 @@ static bool parse_args(int argc, char** argv, Args& a) {
     else if (s == "--k" && i + 1 < argc) a.k = std::atoi(argv[++i]);
     else if (s == "--kmers" && i + 1 < argc) a.kmers = argv[++i];
     else if (s == "--out" && i + 1 < argc) a.out = argv[++i];
-    else if (s == "--threads" && i + 1 < argc) a.threads = std::max(1, std::atoi(argv[++i]));
+    else if (s == "--min-hamming-distance" && i + 1 < argc) a.min_hamming_distance = std::max(0, std::atoi(argv[++i]));
+    // Motif filter parameters
+    else if (s == "--motif-mode" && i + 1 < argc) a.motif_opts.motif_mode = argv[++i];
+    else if (s == "--filter-homopolymers") a.motif_opts.filter_homopolymers = true;
+    else if (s == "--max-homopolymer" && i + 1 < argc) a.motif_opts.max_homopolymer = std::max(1, std::atoi(argv[++i]));
+    else if (s == "--filter-low-complexity") a.motif_opts.filter_low_complexity = true;
+    else if (s == "--min-shannon-entropy" && i + 1 < argc) a.motif_opts.min_shannon_entropy = std::atof(argv[++i]);
+    else if (s == "--filter-dinucleotide-repeats") a.motif_opts.filter_dinucleotide_repeats = true;
+    else if (s == "--filter-restriction-sites") a.motif_opts.filter_restriction_sites = true;
+    else if (s == "--filter-functional-motifs") a.motif_opts.filter_functional_motifs = true;
     else { std::cerr << "Unknown/invalid arg: " << s << "\n"; return false; }
   }
 
@@ -300,6 +321,15 @@ struct FastLineReader {
   }
 };
 
+static int hamming_distance(const std::string& a, const std::string& b) {
+  if (a.size() != b.size()) return -1;
+  int dist = 0;
+  for (size_t i = 0; i < a.size(); ++i) {
+    if (a[i] != b[i]) ++dist;
+  }
+  return dist;
+}
+
 int main(int argc, char** argv) {
   std::ios::sync_with_stdio(false);
 
@@ -448,13 +478,56 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Reuse output line buffer (max 18 + tab + 1 + \n)
+  // Hamming distance computation (only when requested)
+  std::vector<int> nearest_hamming(kmers.size(), -1);
+  std::vector<char> passes_hamming(kmers.size(), '0');
+  if (args.min_hamming_distance > 0) {
+    // Collect indices of found k-mers
+    std::vector<size_t> found_idx;
+    for (size_t i = 0; i < hits.size(); ++i) {
+      if (hits[i] == '1') found_idx.push_back(i);
+    }
+    // For each found k-mer, find minimum Hamming distance to any other found k-mer
+    for (size_t fi = 0; fi < found_idx.size(); ++fi) {
+      size_t i = found_idx[fi];
+      int min_dist = k_fixed + 1; // larger than max possible distance
+      for (size_t fj = 0; fj < found_idx.size(); ++fj) {
+        if (fi == fj) continue;
+        size_t j = found_idx[fj];
+        int d = hamming_distance(kmers[i], kmers[j]);
+        if (d >= 0 && d < min_dist) min_dist = d;
+      }
+      nearest_hamming[i] = (min_dist <= k_fixed) ? min_dist : -1;
+      passes_hamming[i] = (min_dist >= args.min_hamming_distance) ? '1' : '0';
+    }
+  }
+
+  // Reuse output line buffer (max 18 + tab + 3 + tab + 1 + \n + motif metadata)
   std::string out_line;
-  out_line.reserve(32);
+  out_line.reserve(128);
+  bool motif_active = (args.motif_opts.motif_mode != "off");
   for (size_t i = 0; i < kmers.size(); ++i) {
     out_line.assign(kmers[i]);
     out_line.push_back('\t');
     out_line.push_back(hits[i]);
+    if (args.min_hamming_distance > 0) {
+      out_line.push_back('\t');
+      if (nearest_hamming[i] >= 0) {
+        out_line.append(std::to_string(nearest_hamming[i]));
+      }
+      out_line.push_back('\t');
+      out_line.push_back(passes_hamming[i]);
+    }
+    // Motif filter metadata (appended as additional tab-delimited columns)
+    if (motif_active) {
+      MotifFilterResult mf = evaluate_motif_filters(kmers[i], args.motif_opts);
+      out_line.push_back('\t');
+      out_line.push_back(mf.passes ? '1' : '0');                     // motif_passes
+      out_line.push_back('\t');
+      out_line.append(std::to_string(mf.hits.size()));                // motif_hit_count
+      out_line.push_back('\t');
+      out_line.append(motif_hits_to_string(mf.hits));                 // motif_hits detail
+    }
     out_line.push_back('\n');
     std::fwrite(out_line.data(), 1, out_line.size(), fout);
   }

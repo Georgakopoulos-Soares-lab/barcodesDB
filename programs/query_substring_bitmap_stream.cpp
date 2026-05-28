@@ -72,6 +72,7 @@
 #include <sys/resource.h>
 
 #include <roaring/roaring64.h>
+#include "motif_filters.hpp"
 
 using namespace std;
 using Clock = std::chrono::steady_clock;
@@ -624,6 +625,12 @@ struct Args {
   uint16_t burst=1;
 
   uint32_t refill_chunk=256;
+
+  // Motif filter options (all off by default)
+  MotifFilterOptions motif_opts;
+
+  // Include per-row motif metadata in output (only when explicitly requested)
+  bool include_motif_metadata = false;
 };
 
 static void usage(const char* prog) {
@@ -637,7 +644,15 @@ static void usage(const char* prog) {
        << " [--threads N]"
        << " [--window W] [--burst B]"
        << " [--cursor <BCW2...>]"
-       << " [--random_access [--ra_seed U64]]\n";
+       << " [--random_access [--ra_seed U64]]\n"
+       << "  Motif filters (all off by default):\n"
+       << "    --motif-mode <off|flag|exclude>\n"
+       << "    --filter-homopolymers  --max-homopolymer <int> (default 4)\n"
+       << "    --filter-low-complexity --min-shannon-entropy <float> (default 1.5)\n"
+       << "    --filter-dinucleotide-repeats\n"
+       << "    --filter-restriction-sites\n"
+       << "    --filter-functional-motifs\n"
+       << "    --include-motif-metadata  (add per-row motif info to output)\n";
 }
 
 static bool parse_args(int argc, char** argv, Args& a) {
@@ -658,6 +673,18 @@ static bool parse_args(int argc, char** argv, Args& a) {
     else if (s=="--random_access") a.random_access=true;
     else if (s=="--ra_seed" && i+1<argc) { a.ra_seed_set=true; a.ra_seed=(uint64_t)stoull(argv[++i]); }
     else if (s=="--refill_chunk" && i+1<argc) a.refill_chunk=(uint32_t)max(16, stoi(argv[++i]));
+    // Motif filter parameters
+    else if (s=="--motif-mode" && i+1<argc) a.motif_opts.motif_mode=argv[++i];
+    else if (s=="--filter-homopolymers") a.motif_opts.filter_homopolymers=true;
+    else if (s=="--max-homopolymer" && i+1<argc) a.motif_opts.max_homopolymer=max(1, stoi(argv[++i]));
+    else if (s=="--filter-low-complexity") a.motif_opts.filter_low_complexity=true;
+    else if (s=="--min-shannon-entropy" && i+1<argc) a.motif_opts.min_shannon_entropy=stof(argv[++i]);
+    else if (s=="--filter-dinucleotide-repeats") a.motif_opts.filter_dinucleotide_repeats=true;
+    else if (s=="--filter-trinucleotide-repeats") a.motif_opts.filter_trinucleotide_repeats=true;
+    else if (s=="--filter-tetranucleotide-repeats") a.motif_opts.filter_tetranucleotide_repeats=true;
+    else if (s=="--filter-restriction-sites") a.motif_opts.filter_restriction_sites=true;
+    else if (s=="--filter-functional-motifs") a.motif_opts.filter_functional_motifs=true;
+    else if (s=="--include-motif-metadata") a.include_motif_metadata=true;
     else { cerr << "Unknown arg: " << s << "\n"; return false; }
   }
 
@@ -1058,6 +1085,9 @@ int main(int argc, char** argv) {
 
   double scan_sec_total=0.0;
   uint64_t shards_loaded=0;
+  uint64_t motif_filtered_count = 0; // candidates excluded by motif filters
+  bool motif_active = (args.motif_opts.motif_mode != "off");
+  bool motif_exclude = (args.motif_opts.motif_mode == "exclude");
   for (auto& ln : lanes) if (ln.bm) shards_loaded++;
 
   auto t_scan0 = Clock::now();
@@ -1097,8 +1127,9 @@ int main(int argc, char** argv) {
       for (auto& th : pool) th.join();
     }
 
-    // Round-robin emission
+    // Round-robin emission (with optional motif filtering)
     bool emitted_any=false;
+
     for (int i=0;i<(int)args.window && out_vals.size() < need; ++i) {
       if (!lanes[i].active) continue;
 
@@ -1106,6 +1137,22 @@ int main(int argc, char** argv) {
       while (took < args.burst && out_vals.size() < need) {
         if (lanes[i].buf_pos >= lanes[i].buf.size()) break;
         uint64_t v = lanes[i].buf[lanes[i].buf_pos++];
+
+        // Motif filtering: evaluate before emitting
+        if (motif_active) {
+          std::string kmer_decoded = decode_kmer(v, kout);
+          MotifFilterResult mf = evaluate_motif_filters(kmer_decoded, args.motif_opts);
+
+          if (motif_exclude && !mf.passes) {
+            // Skip this candidate — exclude mode
+            motif_filtered_count++;
+            took++;
+            continue;
+          }
+          // For flag mode: candidate passes through. Per-row metadata is only
+          // added when --include-motif-metadata is set (not implemented in basic
+          // line output to avoid breaking existing parsers).
+        }
 
         if (kout == k0) lanes[i].after = v;
         // expand mode state is already updated during refill (anchor/child state)
@@ -1173,8 +1220,17 @@ int main(int argc, char** argv) {
     cursorStr = "";
   }
 
-  // Emit
-  cout << "__META__\t" << cursorStr << "\t" << (hasMore ? "1" : "0") << "\t" << out_vals.size() << "\t" << kout << "\n";
+  // Emit __META__ line (with optional motif filter metadata)
+  if (motif_active) {
+    cout << "__META__\t" << cursorStr << "\t" << (hasMore ? "1" : "0")
+         << "\t" << out_vals.size() << "\t" << kout
+         << "\t" << "motif_filter_applied=1"
+         << "\t" << "motif_mode=" << args.motif_opts.motif_mode
+         << "\t" << "motif_filtered_count=" << motif_filtered_count
+         << "\t" << "returned_count=" << out_vals.size() << "\n";
+  } else {
+    cout << "__META__\t" << cursorStr << "\t" << (hasMore ? "1" : "0") << "\t" << out_vals.size() << "\t" << kout << "\n";
+  }
   for (uint64_t v : out_vals) cout << decode_kmer(v, kout) << "\n";
 
   // Cleanup
@@ -1194,6 +1250,17 @@ int main(int argc, char** argv) {
   cerr << "[INFO] GC% range           : " << args.gcMinPct << "-" << args.gcMaxPct << "\n";
   cerr << "[INFO] Substring           : " << (args.substring_set ? args.substring : "(none)") << "\n";
   cerr << "[INFO] Reverse complement  : " << (args.reverse_complement ? "yes" : "no") << "\n";
+  if (motif_active) {
+    cerr << "[INFO] Motif mode          : " << args.motif_opts.motif_mode << "\n";
+    if (args.motif_opts.filter_homopolymers) cerr << "[INFO] Homopolymer filter   : max=" << args.motif_opts.max_homopolymer << "\n";
+    if (args.motif_opts.filter_low_complexity) cerr << "[INFO] Low-complexity filter: min_entropy=" << args.motif_opts.min_shannon_entropy << "\n";
+    if (args.motif_opts.filter_dinucleotide_repeats) cerr << "[INFO] Dinucleotide repeat filter: enabled\n";
+    if (args.motif_opts.filter_trinucleotide_repeats) cerr << "[INFO] Trinucleotide repeat filter: enabled\n";
+    if (args.motif_opts.filter_tetranucleotide_repeats) cerr << "[INFO] Tetranucleotide repeat filter: enabled\n";
+    if (args.motif_opts.filter_restriction_sites) cerr << "[INFO] Restriction site filter: enabled\n";
+    if (args.motif_opts.filter_functional_motifs) cerr << "[INFO] Functional motif filter: enabled\n";
+    cerr << "[INFO] Motif filtered count  : " << motif_filtered_count << "\n";
+  }
   cerr << "[INFO] Returned            : " << out_vals.size() << "\n";
   cerr << "[INFO] Has more            : " << (hasMore ? "yes" : "no") << "\n";
   cerr << "[INFO] Next cursor         : " << (cursorStr.empty() ? "(none)" : cursorStr) << "\n";

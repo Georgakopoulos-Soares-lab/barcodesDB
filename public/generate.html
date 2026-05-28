@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>barcodesDB • Generate Barcodes</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/common.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <div class="brand-title">barcodesDB</div>
+        <span class="badge">Generate Barcodes</span>
+      </div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/kmer">K-mer Lookup</a>
+        <a href="/substring">Search barcodes</a>
+        <a class="active" href="/generate">Generate barcodes</a>
+      </nav>
+    </div>
+
+    <div class="card">
+      <h2>Generate Random Barcodes</h2>
+      <p class="help">Generate random DNA k-mers matching your criteria. Does NOT query the bitmap. Use this if you want barcodes independently of the database.</p>
+
+      <div class="row" style="margin-top:12px;align-items:flex-end;gap:16px;flex-wrap:wrap">
+        <div style="flex:0 0 auto;min-width:120px">
+          <label class="help">Length (k)</label>
+          <select id="genK" class="input">
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            <option value="7">7</option><option value="8">8</option><option value="9">9</option>
+            <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+            <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+            <option value="16">16</option><option value="17">17</option><option value="18" selected>18</option>
+            <option value="19">19</option><option value="20">20</option><option value="21">21</option>
+            <option value="22">22</option><option value="23">23</option><option value="24">24</option>
+            <option value="25">25</option><option value="26">26</option><option value="27">27</option>
+            <option value="28">28</option><option value="29">29</option><option value="30">30</option>
+            <option value="31">31</option><option value="32">32</option>
+          </select>
+        </div>
+        <div style="flex:0 0 auto;min-width:100px">
+          <label class="help">Count</label>
+          <input id="genN" class="input" type="number" min="1" max="10000" value="10" style="width:90px" />
+        </div>
+        <div style="flex:0 0 auto;min-width:120px">
+          <label class="help">GC% min</label>
+          <input id="genGcMin" class="input" type="number" min="0" max="100" value="0" style="width:80px" />
+        </div>
+        <div style="flex:0 0 auto;min-width:120px">
+          <label class="help">GC% max</label>
+          <input id="genGcMax" class="input" type="number" min="0" max="100" value="100" style="width:80px" />
+        </div>
+        <div style="flex:1 1 auto;min-width:180px">
+          <label class="help">Must contain substring (optional)</label>
+          <input id="genSubstring" class="input" placeholder="e.g., ACGT (leave blank for any)" />
+        </div>
+        <div style="flex:0 0 auto">
+          <button class="btn" id="genRun" style="white-space:nowrap">Generate</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="genResults" style="margin-top:20px"></div>
+
+    <div class="footer">© 2025 barcodesDB</div>
+  </div>
+
+  <script>
+    const genRun = document.getElementById('genRun');
+    const genK = document.getElementById('genK');
+    const genN = document.getElementById('genN');
+    const genGcMin = document.getElementById('genGcMin');
+    const genGcMax = document.getElementById('genGcMax');
+    const genSubstring = document.getElementById('genSubstring');
+    const genResults = document.getElementById('genResults');
+
+    function downloadGenText(filename, text) {
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    genRun.onclick = async () => {
+      genResults.innerHTML = '<div class="card" style="padding:12px">Generating…</div>';
+      const k = parseInt(genK.value, 10) || 18;
+      const n = parseInt(genN.value, 10) || 10;
+      const gc_min = parseInt(genGcMin.value, 10) || 0;
+      const gc_max = parseInt(genGcMax.value, 10) || 100;
+      const substring = genSubstring.value.trim();
+
+      try {
+        const resp = await fetch('/api/generate-random-kmers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ k, n, gc_min, gc_max, substring })
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Request failed');
+
+        if (data.n_returned === 0) {
+          genResults.innerHTML = '<div class="card note">No k-mers matched the criteria. Try widening the GC range or removing the substring constraint.</div>';
+          return;
+        }
+
+        let html = '<div class="card">';
+        html += `<div style="font-weight:800;margin-bottom:8px">Generated ${data.n_returned} of ${data.n_requested} requested ${data.k}-mers (GC ${data.gc_min}–${data.gc_max}%${data.substring ? ', contains "' + data.substring + '"' : ''})</div>`;
+
+        if (data.n_returned < data.n_requested) {
+          html += `<div class="note" style="margin-bottom:8px">Only ${data.n_returned} generated after ${data.attempts} attempts — criteria may be too restrictive.</div>`;
+        }
+
+        html += '<table class="table"><thead><tr><th>#</th><th>K-mer</th><th>GC%</th><th>A</th><th>C</th><th>G</th><th>T</th></tr></thead><tbody>';
+        data.results.forEach((r, i) => {
+          html += `<tr>
+            <td>${i + 1}</td>
+            <td class="kmer">${r.kmer}</td>
+            <td>${r.gc.toFixed(1)}</td>
+            <td>${r.comp.A || 0}</td><td>${r.comp.C || 0}</td><td>${r.comp.G || 0}</td><td>${r.comp.T || 0}</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+
+        const tsvRows = [['kmer', 'gc_pct', 'A', 'C', 'G', 'T']];
+        data.results.forEach(r => tsvRows.push([r.kmer, r.gc.toFixed(1), r.comp.A || 0, r.comp.C || 0, r.comp.G || 0, r.comp.T || 0]));
+        const tsv = tsvRows.map(row => row.join('\t')).join('\n') + '\n';
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+        html += `<button class="btn secondary" style="margin-top:8px" id="dlBtn">Download TSV</button>`;
+        html += '</div>';
+
+        genResults.innerHTML = html;
+        document.getElementById('dlBtn').onclick = () => downloadGenText(`random_barcodes_k${data.k}_n${data.n_returned}_${stamp}.tsv`, tsv);
+      } catch (e) {
+        genResults.innerHTML = `<div class="card note">${e.message}</div>`;
+      }
+    };
+  </script>
+</body>
+</html>

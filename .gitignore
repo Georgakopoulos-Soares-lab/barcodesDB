@@ -1,2 +1,6 @@
 node_modules
 uploads/*
+qc/tmp/
+programs/query_kmer_bitmap
+programs/query_substring_bitmap_stream
+programs/test_motif_filters
