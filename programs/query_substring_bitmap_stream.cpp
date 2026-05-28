@@ -686,6 +686,26 @@ static bool parse_args(int argc, char** argv, Args& a) {
     else if (s=="--filter-tetranucleotide-repeats") a.motif_opts.filter_tetranucleotide_repeats=true;
     else if (s=="--filter-restriction-sites") a.motif_opts.filter_restriction_sites=true;
     else if (s=="--filter-functional-motifs") a.motif_opts.filter_functional_motifs=true;
+    else if (s=="--restriction-sites" && i+1<argc) {
+      // comma-separated list of restriction site sequences to check
+      std::string val(argv[++i]);
+      size_t p=0; while(p<val.size()) {
+        size_t e=val.find(',',p);
+        if(e==std::string::npos) e=val.size();
+        if(e>p) a.motif_opts.restriction_site_filter.push_back(val.substr(p,e-p));
+        p=e+1;
+      }
+    }
+    else if (s=="--functional-motifs" && i+1<argc) {
+      // comma-separated list of functional motif sequences to check
+      std::string val(argv[++i]);
+      size_t p=0; while(p<val.size()) {
+        size_t e=val.find(',',p);
+        if(e==std::string::npos) e=val.size();
+        if(e>p) a.motif_opts.functional_motif_filter.push_back(val.substr(p,e-p));
+        p=e+1;
+      }
+    }
     else if (s=="--include-motif-metadata") a.include_motif_metadata=true;
     else { cerr << "Unknown arg: " << s << "\n"; return false; }
   }
@@ -1233,7 +1253,15 @@ int main(int argc, char** argv) {
   } else {
     cout << "__META__\t" << cursorStr << "\t" << (hasMore ? "1" : "0") << "\t" << out_vals.size() << "\t" << kout << "\n";
   }
-  for (uint64_t v : out_vals) cout << decode_kmer(v, kout) << "\n";
+  for (uint64_t v : out_vals) {
+    std::string kmer_decoded = decode_kmer(v, kout);
+    if (motif_active) {
+      MotifFilterResult mf = evaluate_motif_filters(kmer_decoded, args.motif_opts);
+      cout << kmer_decoded << "\t" << (mf.passes ? "1" : "0") << "\t" << mf.hits.size() << "\t" << motif_hits_to_string(mf.hits) << "\n";
+    } else {
+      cout << kmer_decoded << "\n";
+    }
+  }
 
   // Cleanup
   for (auto& ln : lanes) ln.free_all();

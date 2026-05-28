@@ -137,9 +137,9 @@
                 </div>
 
                 <!-- Homopolymer -->
-                <details class="details" style="margin-bottom:6px" id="homoDetails">
+                <details class="details" style="margin-bottom:6px">
                   <summary style="display:flex;align-items:center;gap:8px">
-                    <input type="checkbox" id="filterHomopolymers" style="margin:0" onclick="event.stopPropagation()" />
+                    <input type="checkbox" id="filterHomopolymers" style="margin:0" />
                     <span style="font-weight:600;font-size:0.9em">Filter homopolymers</span>
                     <span class="pill" style="font-size:11px">runs &gt; N</span>
                   </summary>
@@ -151,9 +151,9 @@
                 </details>
 
                 <!-- Low complexity -->
-                <details class="details" style="margin-bottom:6px" id="lowCompDetails">
+                <details class="details" style="margin-bottom:6px">
                   <summary style="display:flex;align-items:center;gap:8px">
-                    <input type="checkbox" id="filterLowComplexity" style="margin:0" onclick="event.stopPropagation()" />
+                    <input type="checkbox" id="filterLowComplexity" style="margin:0" />
                     <span style="font-weight:600;font-size:0.9em">Filter low-complexity sequences</span>
                     <span class="pill" style="font-size:11px">entropy</span>
                   </summary>
@@ -164,10 +164,34 @@
                   </div>
                 </details>
 
+                <!-- Dinucleotide repeats -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <input type="checkbox" id="filterDinuclRepeats" />
+                  <label for="filterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
+                  <span class="pill" style="font-size:11px">≥6 bp</span>
+                </div>
+                <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive dinucleotide repeats (≥6 bp). e.g., ATATAT, CACACAC. Excludes homopolymer runs.</div>
+
+                <!-- Trinucleotide repeats -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <input type="checkbox" id="filterTrinuclRepeats" />
+                  <label for="filterTrinuclRepeats" style="font-weight:600;font-size:0.9em">Filter trinucleotide repeats</label>
+                  <span class="pill" style="font-size:11px">≥9 bp</span>
+                </div>
+                <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive trinucleotide repeats (≥9 bp). e.g., CAGCAGCAG, ATCATCATC.</div>
+
+                <!-- Tetranucleotide repeats -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <input type="checkbox" id="filterTetranuclRepeats" />
+                  <label for="filterTetranuclRepeats" style="font-weight:600;font-size:0.9em">Filter tetranucleotide repeats</label>
+                  <span class="pill" style="font-size:11px">≥12 bp</span>
+                </div>
+                <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive tetranucleotide repeats (≥12 bp). e.g., GATAGATAGATA.</div>
+
                 <!-- Restriction sites — expandable list -->
                 <details class="details" style="margin-bottom:6px" id="reSitesDetails">
                   <summary style="display:flex;align-items:center;gap:8px">
-                    <input type="checkbox" id="filterRestrictionSites" style="margin:0" onclick="event.stopPropagation()" />
+                    <input type="checkbox" id="filterRestrictionSites" style="margin:0" />
                     <span style="font-weight:600;font-size:0.9em">Filter common restriction sites</span>
                     <span class="pill" style="font-size:11px" id="reSiteCount">50 sites</span>
                   </summary>
@@ -180,7 +204,7 @@
                 <!-- Functional motifs — expandable list -->
                 <details class="details" style="margin-bottom:6px" id="funcMotifDetails">
                   <summary style="display:flex;align-items:center;gap:8px">
-                    <input type="checkbox" id="filterFunctionalMotifs" style="margin:0" onclick="event.stopPropagation()" />
+                    <input type="checkbox" id="filterFunctionalMotifs" style="margin:0" />
                     <span style="font-weight:600;font-size:0.9em">Flag short functional-like motifs</span>
                     <span class="pill" style="font-size:11px" id="funcMotifCount">25 motifs</span>
                   </summary>
@@ -189,35 +213,6 @@
                     <div id="funcMotifGrid" style="display:grid;grid-template-columns:1fr;gap:3px 8px"></div>
                   </div>
                 </details>
-
-                <!-- Repeats sub-section -->
-                <div style="margin-top:14px;margin-bottom:6px;padding:10px 12px;background:#f5f5f5;border-radius:6px">
-                  <div style="font-weight:700;font-size:0.85em;margin-bottom:8px;color:#555">Repeats</div>
-
-                  <!-- Dinucleotide repeats -->
-                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-                    <input type="checkbox" id="filterDinuclRepeats" />
-                    <label for="filterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
-                    <span class="pill" style="font-size:11px">≥6 bp</span>
-                  </div>
-                  <div class="help" style="margin-left:28px;margin-bottom:6px">Detects ≥3 consecutive dinucleotide repeats (≥6 bp). e.g., ATATAT, CACACAC. Excludes homopolymer runs.</div>
-
-                  <!-- Trinucleotide repeats -->
-                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-                    <input type="checkbox" id="filterTrinuclRepeats" />
-                    <label for="filterTrinuclRepeats" style="font-weight:600;font-size:0.9em">Filter trinucleotide repeats</label>
-                    <span class="pill" style="font-size:11px">≥9 bp</span>
-                  </div>
-                  <div class="help" style="margin-left:28px;margin-bottom:6px">Detects ≥3 consecutive trinucleotide repeats (≥9 bp). e.g., CAGCAGCAG, ATCATCATC.</div>
-
-                  <!-- Tetranucleotide repeats -->
-                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:0">
-                    <input type="checkbox" id="filterTetranuclRepeats" />
-                    <label for="filterTetranuclRepeats" style="font-weight:600;font-size:0.9em">Filter tetranucleotide repeats</label>
-                    <span class="pill" style="font-size:11px">≥12 bp</span>
-                  </div>
-                  <div class="help" style="margin-left:28px;margin-top:4px">Detects ≥3 consecutive tetranucleotide repeats (≥12 bp). e.g., GATAGATAGATA.</div>
-                </div>
               </div>
             </details>
 
@@ -464,8 +459,20 @@
       if (document.getElementById('filterDinuclRepeats')?.checked) b.filter_dinucleotide_repeats = true;
       if (document.getElementById('filterTrinuclRepeats')?.checked) b.filter_trinucleotide_repeats = true;
       if (document.getElementById('filterTetranuclRepeats')?.checked) b.filter_tetranucleotide_repeats = true;
-      if (document.getElementById('filterRestrictionSites')?.checked) b.filter_restriction_sites = true;
-      if (document.getElementById('filterFunctionalMotifs')?.checked) b.filter_functional_motifs = true;
+      if (document.getElementById('filterRestrictionSites')?.checked) {
+        b.filter_restriction_sites = true;
+        // Collect individually selected restriction site sequences
+        const selectedRE = Array.from(document.querySelectorAll('#reSitesGrid input[type=checkbox]:checked'))
+          .map(cb => cb.dataset.motif).filter(Boolean);
+        if (selectedRE.length > 0) b.restriction_site_list = selectedRE;
+      }
+      if (document.getElementById('filterFunctionalMotifs')?.checked) {
+        b.filter_functional_motifs = true;
+        // Collect individually selected functional motif sequences
+        const selectedFM = Array.from(document.querySelectorAll('#funcMotifGrid input[type=checkbox]:checked'))
+          .map(cb => cb.dataset.motif).filter(Boolean);
+        if (selectedFM.length > 0) b.functional_motif_list = selectedFM;
+      }
       return b;
     }
 
@@ -661,7 +668,11 @@
             </div>
             <div class="help">${page?.hasMore ? 'More pages available.' : 'No more pages.'}</div>
           </div>
-          ${page?.motifMeta?.motif_filter_applied ? `
+          ${page?.motif_filter_applied ? `
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="pill">Motif mode: ${page.motif_mode || 'flag'}</span>
+            <span class="pill">Filtered/flagged: ${page.motif_fail_count ?? page?.motifMeta?.motif_filtered_count ?? 0}</span>
+          </div>` : page?.motifMeta?.motif_filter_applied ? `
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
             <span class="pill">Motif mode: ${page.motifMeta.motif_mode || 'flag'}</span>
             <span class="pill">Filtered: ${page.motifMeta.motif_filtered_count ?? 0}</span>
@@ -688,9 +699,18 @@
         return;
       }
 
+      const hasMotif = !!(page?.motif_filter_applied);
+      const colSpan = hasMotif ? 8 : 6;
+
       const rows = viewResults.map(r => {
         const comp = r.comp || {A:0,C:0,G:0,T:0};
         const gc = (r.gc ?? 0).toFixed(2);
+        let motifCells = '';
+        if (hasMotif) {
+          const passes = r.motif_passes !== undefined ? (r.motif_passes ? '✓' : '✗') : '—';
+          const hits = r.motif_hits || '';
+          motifCells = `<td>${passes}</td><td style="max-width:280px;word-break:break-all;font-size:0.82em">${hits || '—'}</td>`;
+        }
         return `
           <tr>
             <td class="kmer">${r.kmer}</td>
@@ -699,6 +719,7 @@
             <td>${comp.C ?? 0}</td>
             <td>${comp.G ?? 0}</td>
             <td>${comp.T ?? 0}</td>
+            ${motifCells}
           </tr>
         `;
       }).join('');
@@ -715,10 +736,11 @@
                   <th>C</th>
                   <th>G</th>
                   <th>T</th>
+                  ${hasMotif ? '<th>Motif passes</th><th>Motif hits</th>' : ''}
                 </tr>
               </thead>
               <tbody>
-                ${rows || `<tr><td colspan="6" class="help" style="padding:10px">No matches after filtering.</td></tr>`}
+                ${rows || `<tr><td colspan="${colSpan}" class="help" style="padding:10px">No matches after filtering.</td></tr>`}
               </tbody>
             </table>
           </div>
@@ -767,12 +789,19 @@
       if (dlBtn) {
         dlBtn.onclick = () => {
           const src = (viewResults || []);
+          const headers = ['kmer', 'gc_pct', 'A', 'C', 'G', 'T'];
+          if (hasMotif) { headers.push('motif_passes', 'motif_hits'); }
           const rows = [
-            ['kmer', 'gc_pct', 'A', 'C', 'G', 'T'],
+            headers,
             ...src.map(r => {
               const comp = r.comp || {A:0,C:0,G:0,T:0};
               const gc = (r.gc ?? 0);
-              return [r.kmer, Number(gc).toFixed(2), comp.A ?? 0, comp.C ?? 0, comp.G ?? 0, comp.T ?? 0];
+              const row = [r.kmer, Number(gc).toFixed(2), comp.A ?? 0, comp.C ?? 0, comp.G ?? 0, comp.T ?? 0];
+              if (hasMotif) {
+                row.push(r.motif_passes !== undefined ? (r.motif_passes ? 1 : 0) : '');
+                row.push(r.motif_hits || '');
+              }
+              return row;
             })
           ];
           const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -820,6 +849,11 @@
         kOut: data.kOut || constructK,
         results: Array.isArray(data.results) ? data.results : [],
         motifMeta: data.motifMeta || null,
+        // top-level motif fields for table rendering
+        motif_filter_applied: !!data.motif_filter_applied,
+        motif_mode: data.motif_mode || 'off',
+        motif_fail_count: data.motif_fail_count || 0,
+        motif_options: data.motif_options || null,
       };
     }
 
@@ -1037,27 +1071,75 @@
     ];
 
     (function populateMotifGrids() {
+      function addGridCheckAll(gridEl, countEl, items, label) {
+        // "Check all / Uncheck all" button row
+        const bar = document.createElement('div');
+        bar.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;align-items:center';
+        const btnAll = document.createElement('button');
+        btnAll.type = 'button';
+        btnAll.className = 'btn secondary';
+        btnAll.style.cssText = 'padding:3px 10px;font-size:11px';
+        btnAll.textContent = 'Check all';
+        const btnNone = document.createElement('button');
+        btnNone.type = 'button';
+        btnNone.className = 'btn secondary';
+        btnNone.style.cssText = 'padding:3px 10px;font-size:11px';
+        btnNone.textContent = 'Uncheck all';
+        bar.appendChild(btnAll);
+        bar.appendChild(btnNone);
+        gridEl.appendChild(bar);
+        btnAll.onclick = () => gridEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+        btnNone.onclick = () => gridEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+        countEl.textContent = items.length + ' ' + label;
+        return bar;
+      }
+
       // Restriction sites grid
       const reGrid = document.getElementById('reSitesGrid');
       const reCount = document.getElementById('reSiteCount');
       if (reGrid && RE_SITES.length) {
-        reCount.textContent = RE_SITES.length + ' sites';
+        addGridCheckAll(reGrid, reCount, RE_SITES, 'sites');
         RE_SITES.forEach(([name, motif]) => {
           const row = document.createElement('label');
-          row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;padding:1px 0';
-          row.innerHTML = `<input type="checkbox" checked disabled style="margin:0;accent-color:#1b5e20" /><span style="font-family:monospace;font-weight:600">${motif}</span><span class="help">${name}</span>`;
+          row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;padding:1px 0;cursor:pointer';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.dataset.motif = motif;
+          cb.style.cssText = 'margin:0;accent-color:#1b5e20';
+          row.appendChild(cb);
+          const motifSpan = document.createElement('span');
+          motifSpan.style.cssText = 'font-family:monospace;font-weight:600';
+          motifSpan.textContent = motif;
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'help';
+          nameSpan.textContent = name;
+          row.appendChild(motifSpan);
+          row.appendChild(nameSpan);
           reGrid.appendChild(row);
         });
       }
+
       // Functional motifs grid
       const funcGrid = document.getElementById('funcMotifGrid');
       const funcCount = document.getElementById('funcMotifCount');
       if (funcGrid && FUNC_MOTIFS.length) {
-        funcCount.textContent = FUNC_MOTIFS.length + ' motifs';
+        addGridCheckAll(funcGrid, funcCount, FUNC_MOTIFS, 'motifs');
         FUNC_MOTIFS.forEach(([name, motif]) => {
           const row = document.createElement('label');
-          row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;padding:1px 0';
-          row.innerHTML = `<input type="checkbox" checked disabled style="margin:0;accent-color:#1b5e20" /><span style="font-family:monospace;font-weight:600">${motif}</span><span class="help">${name}</span>`;
+          row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;padding:1px 0;cursor:pointer';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.dataset.motif = motif;
+          cb.style.cssText = 'margin:0;accent-color:#1b5e20';
+          row.appendChild(cb);
+          const motifSpan = document.createElement('span');
+          motifSpan.style.cssText = 'font-family:monospace;font-weight:600';
+          motifSpan.textContent = motif;
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'help';
+          nameSpan.textContent = name;
+          row.appendChild(motifSpan);
+          row.appendChild(nameSpan);
           funcGrid.appendChild(row);
         });
       }

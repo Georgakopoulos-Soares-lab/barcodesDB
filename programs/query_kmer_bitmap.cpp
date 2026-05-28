@@ -75,6 +75,24 @@ static bool parse_args(int argc, char** argv, Args& a) {
     else if (s == "--filter-tetranucleotide-repeats") a.motif_opts.filter_tetranucleotide_repeats = true;
     else if (s == "--filter-restriction-sites") a.motif_opts.filter_restriction_sites = true;
     else if (s == "--filter-functional-motifs") a.motif_opts.filter_functional_motifs = true;
+    else if (s == "--restriction-sites" && i + 1 < argc) {
+      std::string val(argv[++i]);
+      size_t p = 0; while (p < val.size()) {
+        size_t e = val.find(',', p);
+        if (e == std::string::npos) e = val.size();
+        if (e > p) a.motif_opts.restriction_site_filter.push_back(val.substr(p, e - p));
+        p = e + 1;
+      }
+    }
+    else if (s == "--functional-motifs" && i + 1 < argc) {
+      std::string val(argv[++i]);
+      size_t p = 0; while (p < val.size()) {
+        size_t e = val.find(',', p);
+        if (e == std::string::npos) e = val.size();
+        if (e > p) a.motif_opts.functional_motif_filter.push_back(val.substr(p, e - p));
+        p = e + 1;
+      }
+    }
     else { std::cerr << "Unknown/invalid arg: " << s << "\n"; return false; }
   }
 

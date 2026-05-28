@@ -57,9 +57,15 @@ struct MotifFilterOptions {
 
     // Restriction-site filter
     bool filter_restriction_sites = false;
+    // If non-empty, only check sites whose forward-strand sequence is in this list.
+    // Empty means check all built-in sites.
+    std::vector<std::string> restriction_site_filter;
 
     // Functional-motif filter
     bool filter_functional_motifs = false;
+    // If non-empty, only check motifs whose forward-strand sequence is in this list.
+    // Empty means check all built-in motifs.
+    std::vector<std::string> functional_motif_filter;
 
     // Global mode: "off" (no-op), "flag" (report but don't exclude),
     //              "exclude" (skip sequences that fail)
@@ -356,10 +362,18 @@ inline std::string reverse_complement(const std::string& s) {
 }
 
 /// Check restriction sites (forward + reverse complement if not palindromic).
-inline std::vector<MotifHit> find_restriction_sites(std::string_view seq) {
+/// If filter_list is non-empty, only check sites whose forward sequence is in filter_list.
+inline std::vector<MotifHit> find_restriction_sites(std::string_view seq,
+                                                     const std::vector<std::string>& filter_list = {}) {
     std::vector<MotifHit> hits;
 
     for (const auto& [name, motif] : restriction_site_list()) {
+        // If a filter list is specified, skip sites not in it
+        if (!filter_list.empty()) {
+            bool found_in_filter = false;
+            for (const auto& f : filter_list) if (f == motif) { found_in_filter = true; break; }
+            if (!found_in_filter) continue;
+        }
         // Forward
         size_t pos = 0;
         while ((pos = seq.find(motif, pos)) != std::string::npos) {
@@ -498,7 +512,7 @@ inline MotifFilterResult evaluate_motif_filters(std::string_view seq_orig,
 
     // 4. Restriction-site filter
     if (opts.filter_restriction_sites) {
-        auto sites = find_restriction_sites(seq);
+        auto sites = find_restriction_sites(seq, opts.restriction_site_filter);
         for (auto& h : sites) {
             result.hits.push_back(std::move(h));
             if (exclude) result.passes = false;
@@ -507,7 +521,20 @@ inline MotifFilterResult evaluate_motif_filters(std::string_view seq_orig,
 
     // 5. Functional-motif filter
     if (opts.filter_functional_motifs) {
-        auto motifs = find_literal_motifs(seq, functional_motif_list(), "functional_motif");
+        // Build the effective motif list (all or filtered subset)
+        const auto& all_motifs = functional_motif_list();
+        std::vector<std::pair<std::string, std::string>> effective_motifs;
+        if (opts.functional_motif_filter.empty()) {
+            effective_motifs = all_motifs;
+        } else {
+            for (const auto& [name, pattern] : all_motifs) {
+                bool in_filter = false;
+                for (const auto& f : opts.functional_motif_filter)
+                    if (f == pattern) { in_filter = true; break; }
+                if (in_filter) effective_motifs.push_back({name, pattern});
+            }
+        }
+        auto motifs = find_literal_motifs(seq, effective_motifs, "functional_motif");
         for (auto& h : motifs) {
             result.hits.push_back(std::move(h));
             if (exclude) result.passes = false;

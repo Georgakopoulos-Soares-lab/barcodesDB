@@ -39,15 +39,14 @@
             <div class="help">Optional. Reports whether the queried barcode is at least this many substitutions away from matched same-length sequences.</div>
           </div>
 
-          <!-- Optional sequence filters with detail dropdowns -->
-          <!-- ============================================================ -->
+          <!-- Optional sequence filters -->
           <details class="details" style="margin-top:14px" id="motifDetails">
             <summary>
               <span style="font-weight:800">Optional sequence filters</span>
               <span class="help" id="motifSummary">Off</span>
             </summary>
             <div class="details-body">
-              <p class="help" style="margin-bottom:12px">Optional sequence-level filters can flag or exclude barcodes containing simple short motifs such as homopolymer runs, low-complexity repeats, common restriction enzyme sites, and selected functional-like motifs. These filters do not guarantee functional neutrality and are not organism-specific.</p>
+              <p class="help" style="margin-bottom:12px">Optional sequence-level filters can flag or exclude barcodes containing simple short motifs such as homopolymer runs, low-complexity repeats, common restriction enzyme sites, and selected functional-like motifs. These filters do not guarantee functional neutrality and are not organism-specific. For exact k-mer lookup, filters only annotate the queried sequence — they do not alter the present/absent result.</p>
 
               <div class="field" style="margin-bottom:12px">
                 <label class="help" style="font-weight:700">Motif mode</label>
@@ -56,91 +55,63 @@
                   <option value="flag">Flag only</option>
                   <option value="exclude">Exclude (annotate)</option>
                 </select>
-                <div class="help">For exact k-mer lookup, filters only annotate the queried sequence — they do not alter the present/absent result.</div>
+                <div class="help">For exact lookup, "Exclude" annotates sequences that would be excluded from candidate outputs but does not hide the lookup result.</div>
               </div>
 
-              <!-- Homopolymer -->
-              <details class="details" style="margin-bottom:6px" id="homoDetails">
-                <summary style="display:flex;align-items:center;gap:8px">
-                  <input type="checkbox" id="filterHomopolymers" style="margin:0" onclick="event.stopPropagation()" />
-                  <span style="font-weight:600;font-size:0.9em">Filter homopolymers</span>
-                  <span class="pill" style="font-size:11px">runs &gt; N</span>
-                </summary>
-                <div class="details-body">
-                  <label class="help">Max run length:</label>
-                  <input class="input" type="number" id="maxHomopolymer" min="1" max="20" value="4" style="width:70px" />
-                  <div class="help" style="margin-top:6px">Detects consecutive runs of the same base (A, C, G, or T) longer than the threshold. e.g., AAAAA (5 A's) fails with max=4.</div>
-                </div>
-              </details>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterHomopolymers" />
+                <label for="filterHomopolymers" style="font-weight:600;font-size:0.9em">Filter homopolymers</label>
+                <label class="help">Max run length:</label>
+                <input class="input" type="number" id="maxHomopolymer" min="1" max="20" value="4" style="width:70px" />
+              </div>
 
-              <!-- Low complexity -->
-              <details class="details" style="margin-bottom:6px" id="lowCompDetails">
-                <summary style="display:flex;align-items:center;gap:8px">
-                  <input type="checkbox" id="filterLowComplexity" style="margin:0" onclick="event.stopPropagation()" />
-                  <span style="font-weight:600;font-size:0.9em">Filter low-complexity sequences</span>
-                  <span class="pill" style="font-size:11px">entropy</span>
-                </summary>
-                <div class="details-body">
-                  <label class="help">Min Shannon entropy:</label>
-                  <input class="input" type="number" id="minShannonEntropy" min="0" max="2" step="0.1" value="1.5" style="width:70px" />
-                  <div class="help" style="margin-top:6px">Shannon entropy H = -sum(p_i·log₂(p_i)) over A/C/G/T. Max = 2.0 (perfectly balanced). Threshold: sequences with H below this are flagged.</div>
-                </div>
-              </details>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterLowComplexity" />
+                <label for="filterLowComplexity" style="font-weight:600;font-size:0.9em">Filter low-complexity sequences</label>
+                <label class="help">Min Shannon entropy:</label>
+                <input class="input" type="number" id="minShannonEntropy" min="0" max="2" step="0.1" value="1.5" style="width:70px" />
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterDinuclRepeats" />
+                <label for="filterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterTrinuclRepeats" />
+                <label for="filterTrinuclRepeats" style="font-weight:600;font-size:0.9em">Filter trinucleotide repeats</label>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <input type="checkbox" id="filterTetranuclRepeats" />
+                <label for="filterTetranuclRepeats" style="font-weight:600;font-size:0.9em">Filter tetranucleotide repeats</label>
+              </div>
 
               <!-- Restriction sites — expandable list -->
               <details class="details" style="margin-bottom:6px" id="reSitesDetails">
-                <summary style="display:flex;align-items:center;gap:8px">
+                <summary style="display:flex;align-items:center;gap:8px" onclick="event.stopPropagation()">
                   <input type="checkbox" id="filterRestrictionSites" style="margin:0" onclick="event.stopPropagation()" />
                   <span style="font-weight:600;font-size:0.9em">Filter common restriction sites</span>
                   <span class="pill" style="font-size:11px" id="reSiteCount">50 sites</span>
                 </summary>
                 <div class="details-body" id="reSitesList" style="max-height:300px;overflow-y:auto">
-                  <div class="help" style="margin-bottom:8px">All sites below are checked when this filter is enabled. Both forward and reverse-complement strands are scanned.</div>
+                  <div class="help" style="margin-bottom:8px">Check individual sites to filter. Unchecked means all sites are used when the parent checkbox is checked.</div>
                   <div id="reSitesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px 8px"></div>
                 </div>
               </details>
 
               <!-- Functional motifs — expandable list -->
               <details class="details" style="margin-bottom:6px" id="funcMotifDetails">
-                <summary style="display:flex;align-items:center;gap:8px">
+                <summary style="display:flex;align-items:center;gap:8px" onclick="event.stopPropagation()">
                   <input type="checkbox" id="filterFunctionalMotifs" style="margin:0" onclick="event.stopPropagation()" />
                   <span style="font-weight:600;font-size:0.9em">Flag short functional-like motifs</span>
                   <span class="pill" style="font-size:11px" id="funcMotifCount">25 motifs</span>
                 </summary>
                 <div class="details-body" id="funcMotifList" style="max-height:300px;overflow-y:auto">
-                  <div class="help" style="margin-bottom:8px">These are conservative sequence patterns, NOT organism-specific annotations. All motifs below are checked when enabled.</div>
+                  <div class="help" style="margin-bottom:8px">These are conservative sequence patterns, NOT organism-specific annotations. Check individual motifs to filter.</div>
                   <div id="funcMotifGrid" style="display:grid;grid-template-columns:1fr;gap:3px 8px"></div>
                 </div>
               </details>
-
-              <!-- Repeats sub-section -->
-              <div style="margin-top:14px;margin-bottom:6px;padding:10px 12px;background:#f5f5f5;border-radius:6px">
-                <div style="font-weight:700;font-size:0.85em;margin-bottom:8px;color:#555">Repeats</div>
-
-                <!-- Dinucleotide repeats -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-                  <input type="checkbox" id="filterDinuclRepeats" />
-                  <label for="filterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
-                  <span class="pill" style="font-size:11px">≥6 bp</span>
-                </div>
-                <div class="help" style="margin-left:28px;margin-bottom:6px">Detects ≥3 consecutive dinucleotide repeats (≥6 bp). e.g., ATATAT, CACACAC. Excludes homopolymer runs.</div>
-
-                <!-- Trinucleotide repeats -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-                  <input type="checkbox" id="filterTrinuclRepeats" />
-                  <label for="filterTrinuclRepeats" style="font-weight:600;font-size:0.9em">Filter trinucleotide repeats</label>
-                  <span class="pill" style="font-size:11px">≥9 bp</span>
-                </div>
-                <div class="help" style="margin-left:28px;margin-bottom:6px">Detects ≥3 consecutive trinucleotide repeats (≥9 bp). e.g., CAGCAGCAG, ATCATCATC.</div>
-
-                <!-- Tetranucleotide repeats -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:0">
-                  <input type="checkbox" id="filterTetranuclRepeats" />
-                  <label for="filterTetranuclRepeats" style="font-weight:600;font-size:0.9em">Filter tetranucleotide repeats</label>
-                  <span class="pill" style="font-size:11px">≥12 bp</span>
-                </div>
-                <div class="help" style="margin-left:28px;margin-top:4px">Detects ≥3 consecutive tetranucleotide repeats (≥12 bp). e.g., GATAGATAGATA.</div>
-              </div>
             </div>
           </details>
 
@@ -157,6 +128,35 @@
   </div>
 
   <script>
+    const RE_SITES = [
+      ["EcoRI","GAATTC"],["BamHI","GGATCC"],["HindIII","AAGCTT"],["NotI","GCGGCCGC"],
+      ["XhoI","CTCGAG"],["XbaI","TCTAGA"],["SpeI","ACTAGT"],["NheI","GCTAGC"],
+      ["PstI","CTGCAG"],["KpnI","GGTACC"],["SacI","GAGCTC"],["SalI","GTCGAC"],
+      ["SmaI","CCCGGG"],["MluI","ACGCGT"],["AgeI","ACCGGT"],["BglII","AGATCT"],
+      ["AatII","GACGTC"],["AccI","GTATAC"],["AflII","CTTAAG"],["AscI","GGCGCGCC"],
+      ["AvrII","CCTAGG"],["BclI","TGATCA"],["BsiWI","CGTACG"],["BspHI","TCATGA"],
+      ["BsrGI","TGTACA"],["BssHII","GCGCGC"],["ClaI","ATCGAT"],["DraI","TTTAAA"],
+      ["EcoRV","GATATC"],["FseI","GGCCGGCC"],["HpaI","GTTAAC"],["MfeI","CAATTG"],
+      ["NcoI","CCATGG"],["NdeI","CATATG"],["NruI","TCGCGA"],["PacI","TTAATTAA"],
+      ["PmeI","GTTTAAAC"],["PvuII","CAGCTG"],["SbfI","CCTGCAGG"],["ScaI","AGTACT"],
+      ["SnaBI","TACGTA"],["SspI","AATATT"],["StuI","AGGCCT"],["SwaI","ATTTAAAT"],
+      ["AluI","AGCT"],["HaeIII","GGCC"],["MseI","TTAA"],["MspI","CCGG"],
+      ["RsaI","GTAC"],["TaqI","TCGA"]
+    ];
+    const FUNC_MOTIFS = [
+      ["TATA_box","TATAAA"],["GC_box","GGGCGG"],["CCAAT_box","CCAAT"],
+      ["CRE","TGACGTCA"],["E_box_canonical","CACGTG"],
+      ["AP1_site","TGACTCA"],["NFkB_site","GGGACTTTCC"],["STAT3_site","TTCCGGGAA"],
+      ["OCT4_site","ATGCAAAT"],["E2F_site","TTTCCCGC"],["Ets_binding_core","CCGGAAGT"],
+      ["polyA_signal","AATAAA"],["alt_polyA_signal","ATTAAA"],
+      ["polyA_variant_AATACA","AATACA"],["polyA_variant_GATAAA","GATAAA"],
+      ["polyA_variant_AATAGA","AATAGA"],["polyA_variant_AATGAA","AATGAA"],
+      ["ARE_mRNA_stability","ATTTAT"],["splice_donor_like","GTAGT"],
+      ["splice_acceptor_like","CAGG"],["Kozak_like_core","ACCATGG"],
+      ["Shine_Dalgarno","AGGAGG"],["Pribnow_box","TATAAT"],
+      ["minus35_sigma70","TTGACA"],["CpG","CG"]
+    ];
+
     const runBtn = document.getElementById('run');
     const clearBtn = document.getElementById('clear');
     const fileInp = document.getElementById('file');
@@ -194,65 +194,64 @@
       el.addEventListener('change', updateMotifSummary);
     }
 
-    // Motif grid data — restriction sites (matching motif_filters.hpp)
-    const RE_SITES = [
-      ["EcoRI","GAATTC"],["BamHI","GGATCC"],["HindIII","AAGCTT"],["NotI","GCGGCCGC"],
-      ["XhoI","CTCGAG"],["XbaI","TCTAGA"],["SpeI","ACTAGT"],["NheI","GCTAGC"],
-      ["PstI","CTGCAG"],["KpnI","GGTACC"],["SacI","GAGCTC"],["SalI","GTCGAC"],
-      ["SmaI","CCCGGG"],["MluI","ACGCGT"],["AgeI","ACCGGT"],["BglII","AGATCT"],
-      ["AatII","GACGTC"],["AccI","GTATAC"],["AflII","CTTAAG"],["AscI","GGCGCGCC"],
-      ["AvrII","CCTAGG"],["BclI","TGATCA"],["BsiWI","CGTACG"],["BspHI","TCATGA"],
-      ["BsrGI","TGTACA"],["BssHII","GCGCGC"],["ClaI","ATCGAT"],["DraI","TTTAAA"],
-      ["EcoRV","GATATC"],["FseI","GGCCGGCC"],["HpaI","GTTAAC"],["MfeI","CAATTG"],
-      ["NcoI","CCATGG"],["NdeI","CATATG"],["NruI","TCGCGA"],["PacI","TTAATTAA"],
-      ["PmeI","GTTTAAAC"],["PvuII","CAGCTG"],["SbfI","CCTGCAGG"],["ScaI","AGTACT"],
-      ["SnaBI","TACGTA"],["SspI","AATATT"],["StuI","AGGCCT"],["SwaI","ATTTAAAT"],
-      ["AluI","AGCT"],["HaeIII","GGCC"],["MseI","TTAA"],["MspI","CCGG"],
-      ["RsaI","GTAC"],["TaqI","TCGA"]
-    ];
-    // Functional motif list (matching motif_filters.hpp)
-    const FUNC_MOTIFS = [
-      ["TATA_box","TATAAA"],["GC_box","GGGCGG"],["CCAAT_box","CCAAT"],
-      ["CRE","TGACGTCA"],["E_box_canonical","CACGTG"],
-      ["AP1_site","TGACTCA"],["NFkB_site","GGGACTTTCC"],["STAT3_site","TTCCGGGAA"],
-      ["OCT4_site","ATGCAAAT"],["E2F_site","TTTCCCGC"],["Ets_binding_core","CCGGAAGT"],
-      ["polyA_signal","AATAAA"],["alt_polyA_signal","ATTAAA"],
-      ["polyA_variant_AATACA","AATACA"],["polyA_variant_GATAAA","GATAAA"],
-      ["polyA_variant_AATAGA","AATAGA"],["polyA_variant_AATGAA","AATGAA"],
-      ["ARE_mRNA_stability","ATTTAT"],["splice_donor_like","GTAGT"],
-      ["splice_acceptor_like","CAGG"],["Kozak_like_core","ACCATGG"],
-      ["Shine_Dalgarno","AGGAGG"],["Pribnow_box","TATAAT"],
-      ["minus35_sigma70","TTGACA"],["CpG","CG"]
-    ];
-
     (function populateMotifGrids() {
-      // Restriction sites grid
+      function addGridCheckAll(gridEl, countEl, items, label) {
+        const bar = document.createElement('div');
+        bar.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;align-items:center';
+        const btnAll = document.createElement('button');
+        btnAll.type = 'button'; btnAll.className = 'btn secondary';
+        btnAll.style.cssText = 'padding:3px 10px;font-size:11px';
+        btnAll.textContent = 'Check all';
+        const btnNone = document.createElement('button');
+        btnNone.type = 'button'; btnNone.className = 'btn secondary';
+        btnNone.style.cssText = 'padding:3px 10px;font-size:11px';
+        btnNone.textContent = 'Uncheck all';
+        bar.appendChild(btnAll); bar.appendChild(btnNone);
+        gridEl.appendChild(bar);
+        btnAll.onclick = () => gridEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+        btnNone.onclick = () => gridEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+        countEl.textContent = items.length + ' ' + label;
+      }
       const reGrid = document.getElementById('reSitesGrid');
       const reCount = document.getElementById('reSiteCount');
       if (reGrid && RE_SITES.length) {
-        reCount.textContent = RE_SITES.length + ' sites';
+        addGridCheckAll(reGrid, reCount, RE_SITES, 'sites');
         RE_SITES.forEach(([name, motif]) => {
           const row = document.createElement('label');
-          row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;padding:1px 0';
-          row.innerHTML = `<input type="checkbox" checked disabled style="margin:0;accent-color:#1b5e20" /><span style="font-family:monospace;font-weight:600">${motif}</span><span class="help">${name}</span>`;
+          row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;padding:1px 0;cursor:pointer';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox'; cb.dataset.motif = motif;
+          cb.style.cssText = 'margin:0;accent-color:#1b5e20';
+          const motifSpan = document.createElement('span');
+          motifSpan.style.cssText = 'font-family:monospace;font-weight:600';
+          motifSpan.textContent = motif;
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'help'; nameSpan.textContent = name;
+          row.appendChild(cb); row.appendChild(motifSpan); row.appendChild(nameSpan);
           reGrid.appendChild(row);
         });
       }
-      // Functional motifs grid
       const funcGrid = document.getElementById('funcMotifGrid');
       const funcCount = document.getElementById('funcMotifCount');
       if (funcGrid && FUNC_MOTIFS.length) {
-        funcCount.textContent = FUNC_MOTIFS.length + ' motifs';
+        addGridCheckAll(funcGrid, funcCount, FUNC_MOTIFS, 'motifs');
         FUNC_MOTIFS.forEach(([name, motif]) => {
           const row = document.createElement('label');
-          row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;padding:1px 0';
-          row.innerHTML = `<input type="checkbox" checked disabled style="margin:0;accent-color:#1b5e20" /><span style="font-family:monospace;font-weight:600">${motif}</span><span class="help">${name}</span>`;
+          row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;padding:1px 0;cursor:pointer';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox'; cb.dataset.motif = motif;
+          cb.style.cssText = 'margin:0;accent-color:#1b5e20';
+          const motifSpan = document.createElement('span');
+          motifSpan.style.cssText = 'font-family:monospace;font-weight:600';
+          motifSpan.textContent = motif;
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'help'; nameSpan.textContent = name;
+          row.appendChild(cb); row.appendChild(motifSpan); row.appendChild(nameSpan);
           funcGrid.appendChild(row);
         });
       }
     })();
 
-    // Initialize motif summary
     updateMotifSummary();
 
     runBtn.onclick = async () => {
@@ -278,8 +277,18 @@
         if (document.getElementById('filterDinuclRepeats')?.checked) motifBody.filter_dinucleotide_repeats = true;
         if (document.getElementById('filterTrinuclRepeats')?.checked) motifBody.filter_trinucleotide_repeats = true;
         if (document.getElementById('filterTetranuclRepeats')?.checked) motifBody.filter_tetranucleotide_repeats = true;
-        if (document.getElementById('filterRestrictionSites')?.checked) motifBody.filter_restriction_sites = true;
-        if (document.getElementById('filterFunctionalMotifs')?.checked) motifBody.filter_functional_motifs = true;
+        if (document.getElementById('filterRestrictionSites')?.checked) {
+          motifBody.filter_restriction_sites = true;
+          const selectedRE = Array.from(document.querySelectorAll('#reSitesGrid input[type=checkbox]:checked'))
+            .map(cb => cb.dataset.motif).filter(Boolean);
+          if (selectedRE.length > 0) motifBody.restriction_site_list = selectedRE;
+        }
+        if (document.getElementById('filterFunctionalMotifs')?.checked) {
+          motifBody.filter_functional_motifs = true;
+          const selectedFM = Array.from(document.querySelectorAll('#funcMotifGrid input[type=checkbox]:checked'))
+            .map(cb => cb.dataset.motif).filter(Boolean);
+          if (selectedFM.length > 0) motifBody.functional_motif_list = selectedFM;
+        }
       }
 
       try {
