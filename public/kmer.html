@@ -73,11 +73,6 @@
               </div>
 
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-                <input type="checkbox" id="filterDinuclRepeats" />
-                <label for="filterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
-              </div>
-
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
                 <input type="checkbox" id="filterRestrictionSites" />
                 <label for="filterRestrictionSites" style="font-weight:600;font-size:0.9em">Filter common restriction sites</label>
               </div>
@@ -85,6 +80,26 @@
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
                 <input type="checkbox" id="filterFunctionalMotifs" />
                 <label for="filterFunctionalMotifs" style="font-weight:600;font-size:0.9em">Flag short functional-like motifs</label>
+              </div>
+
+              <!-- Repeats sub-section -->
+              <div style="margin-top:14px;margin-bottom:6px;padding:8px 10px;background:#f5f5f5;border-radius:6px">
+                <div style="font-weight:700;font-size:0.85em;margin-bottom:8px;color:#555">Repeats</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <input type="checkbox" id="filterDinuclRepeats" />
+                  <label for="filterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
+                  <span class="pill" style="font-size:11px">≥6 bp</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <input type="checkbox" id="filterTrinuclRepeats" />
+                  <label for="filterTrinuclRepeats" style="font-weight:600;font-size:0.9em">Filter trinucleotide repeats</label>
+                  <span class="pill" style="font-size:11px">≥9 bp</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:0">
+                  <input type="checkbox" id="filterTetranuclRepeats" />
+                  <label for="filterTetranuclRepeats" style="font-weight:600;font-size:0.9em">Filter tetranucleotide repeats</label>
+                  <span class="pill" style="font-size:11px">≥12 bp</span>
+                </div>
               </div>
             </div>
           </details>
@@ -120,6 +135,8 @@
       if (document.getElementById('filterHomopolymers')?.checked) parts.push('Homopolymers');
       if (document.getElementById('filterLowComplexity')?.checked) parts.push('Low complexity');
       if (document.getElementById('filterDinuclRepeats')?.checked) parts.push('Dinucleotide repeats');
+      if (document.getElementById('filterTrinuclRepeats')?.checked) parts.push('Trinucleotide repeats');
+      if (document.getElementById('filterTetranuclRepeats')?.checked) parts.push('Tetranucleotide repeats');
       if (document.getElementById('filterRestrictionSites')?.checked) parts.push('Restriction sites');
       if (document.getElementById('filterFunctionalMotifs')?.checked) parts.push('Functional motifs');
       summary.textContent = parts.join(' + ');
@@ -128,6 +145,7 @@
     // Wire motif filter update
     const motifEls = ['motifMode', 'filterHomopolymers', 'maxHomopolymer',
       'filterLowComplexity', 'minShannonEntropy', 'filterDinuclRepeats',
+      'filterTrinuclRepeats', 'filterTetranuclRepeats',
       'filterRestrictionSites', 'filterFunctionalMotifs'];
     for (const id of motifEls) {
       const el = document.getElementById(id);
@@ -157,6 +175,8 @@
           motifBody.min_shannon_entropy = parseFloat(document.getElementById('minShannonEntropy')?.value) || 1.5;
         }
         if (document.getElementById('filterDinuclRepeats')?.checked) motifBody.filter_dinucleotide_repeats = true;
+        if (document.getElementById('filterTrinuclRepeats')?.checked) motifBody.filter_trinucleotide_repeats = true;
+        if (document.getElementById('filterTetranuclRepeats')?.checked) motifBody.filter_tetranucleotide_repeats = true;
         if (document.getElementById('filterRestrictionSites')?.checked) motifBody.filter_restriction_sites = true;
         if (document.getElementById('filterFunctionalMotifs')?.checked) motifBody.filter_functional_motifs = true;
       }

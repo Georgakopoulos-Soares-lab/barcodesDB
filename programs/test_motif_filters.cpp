@@ -107,6 +107,40 @@ int main() {
         TEST("ACGTAC does not trigger dinucleotide repeat", res2.passes == true);
     }
 
+    // --- Trinucleotide repeats ---
+    {
+        std::cout << "-- Trinucleotide repeat filter --\n";
+        MotifFilterOptions opts;
+        opts.motif_mode = "exclude";
+        opts.filter_trinucleotide_repeats = true;
+
+        auto res1 = evaluate_motif_filters("CAGCAGCAGCAG", opts);
+        TEST("CAGCAGCAG triggers trinucleotide repeat", res1.passes == false);
+
+        auto res2 = evaluate_motif_filters("ATCATCATCATC", opts);
+        TEST("ATCATCATC triggers trinucleotide repeat", res2.passes == false);
+
+        auto res3 = evaluate_motif_filters("CAGCGTACGTAC", opts);
+        TEST("No tri repeat pattern passes", res3.passes == true);
+    }
+
+    // --- Tetranucleotide repeats ---
+    {
+        std::cout << "-- Tetranucleotide repeat filter --\n";
+        MotifFilterOptions opts;
+        opts.motif_mode = "exclude";
+        opts.filter_tetranucleotide_repeats = true;
+
+        auto res1 = evaluate_motif_filters("GATAGATAGATA", opts);
+        TEST("GATAGATAGATA triggers tetranucleotide repeat", res1.passes == false);
+
+        auto res2 = evaluate_motif_filters("CACTCACTCACT", opts);
+        TEST("CACTCACTCACT triggers tetranucleotide repeat", res2.passes == false);
+
+        auto res3 = evaluate_motif_filters("GATAGATAGATCG", opts);
+        TEST("No tetra repeat pattern passes", res3.passes == true);
+    }
+
     // --- Functional motifs ---
     {
         std::cout << "-- Functional motif filter --\n";

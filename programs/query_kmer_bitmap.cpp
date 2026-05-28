@@ -49,6 +49,8 @@ static void usage(const char* prog) {
             << "    --filter-homopolymers  --max-homopolymer <int> (default 4)\n"
             << "    --filter-low-complexity --min-shannon-entropy <float> (default 1.5)\n"
             << "    --filter-dinucleotide-repeats\n"
+            << "    --filter-trinucleotide-repeats\n"
+            << "    --filter-tetranucleotide-repeats\n"
             << "    --filter-restriction-sites\n"
             << "    --filter-functional-motifs\n";
 }
@@ -69,6 +71,8 @@ static bool parse_args(int argc, char** argv, Args& a) {
     else if (s == "--filter-low-complexity") a.motif_opts.filter_low_complexity = true;
     else if (s == "--min-shannon-entropy" && i + 1 < argc) a.motif_opts.min_shannon_entropy = std::atof(argv[++i]);
     else if (s == "--filter-dinucleotide-repeats") a.motif_opts.filter_dinucleotide_repeats = true;
+    else if (s == "--filter-trinucleotide-repeats") a.motif_opts.filter_trinucleotide_repeats = true;
+    else if (s == "--filter-tetranucleotide-repeats") a.motif_opts.filter_tetranucleotide_repeats = true;
     else if (s == "--filter-restriction-sites") a.motif_opts.filter_restriction_sites = true;
     else if (s == "--filter-functional-motifs") a.motif_opts.filter_functional_motifs = true;
     else { std::cerr << "Unknown/invalid arg: " << s << "\n"; return false; }
