@@ -439,11 +439,21 @@ app.post('/api/query-substring', async (req, res) => {
     const { stdout } = await runBinary(BIN_QUERY_SUBSTR, args, { timeoutMs: 2 * 60 * 1000 });
     const parsed = parseSubstringStdout(stdout);
 
-    const results = parsed.kmers.map((kmer) => ({
-      kmer,
-      gc: gcContent(kmer),
-      comp: ntComp(kmer),
-    }));
+    const motifApplied = !!(motifOpts.motif_mode && motifOpts.motif_mode !== 'off');
+    let motifFailCount = 0;
+    const results = parsed.kmers.map((rawLine) => {
+      const parts = rawLine.split('\t');
+      const kmer = parts[0];
+      const result = { kmer, gc: gcContent(kmer), comp: ntComp(kmer) };
+      if (motifApplied && parts.length >= 3) {
+        const motifPasses = parts[1] === '1';
+        result.motif_passes = motifPasses;
+        result.motif_hit_count = parseInt(parts[2], 10) || 0;
+        result.motif_hits = parts[3] || '';
+        if (!motifPasses) motifFailCount++;
+      }
+      return result;
+    });
 
     res.json({
       cursorUsed,
@@ -460,7 +470,12 @@ app.post('/api/query-substring', async (req, res) => {
       constructK: kOut,
       baseK,
 
-      // motif filter metadata
+      // top-level motif filter state (used by UI for hasMotif check)
+      motif_filter_applied: motifApplied,
+      motif_mode: motifApplied ? motifOpts.motif_mode : undefined,
+      motif_fail_count: motifApplied ? motifFailCount : undefined,
+
+      // motif filter metadata (legacy compat)
       motifMeta: parsed.motifMeta && Object.keys(parsed.motifMeta).length > 0 ? {
         motif_filter_applied: parsed.motifMeta.motif_filter_applied === '1',
         motif_mode: parsed.motifMeta.motif_mode || 'off',

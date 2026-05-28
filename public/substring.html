@@ -700,6 +700,7 @@
       }
 
       const hasMotif = !!(page?.motif_filter_applied);
+      const isFlag = hasMotif && page?.motif_mode === 'flag';
       const colSpan = hasMotif ? 8 : 6;
 
       const rows = viewResults.map(r => {
@@ -709,7 +710,7 @@
         if (hasMotif) {
           const passes = r.motif_passes !== undefined ? (r.motif_passes ? '✓' : '✗') : '—';
           const hits = r.motif_hits || '';
-          motifCells = `<td>${passes}</td><td style="max-width:280px;word-break:break-all;font-size:0.82em">${hits || '—'}</td>`;
+          motifCells = `<td style="text-align:center">${passes}</td><td style="max-width:320px;word-break:break-all;font-size:0.82em">${hits || '—'}</td>`;
         }
         return `
           <tr>
@@ -736,7 +737,7 @@
                   <th>C</th>
                   <th>G</th>
                   <th>T</th>
-                  ${hasMotif ? '<th>Motif passes</th><th>Motif hits</th>' : ''}
+                  ${hasMotif ? '<th>Passes</th><th>Motif hits</th>' : ''}
                 </tr>
               </thead>
               <tbody>
