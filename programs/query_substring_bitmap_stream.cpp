@@ -650,6 +650,8 @@ static void usage(const char* prog) {
        << "    --filter-homopolymers  --max-homopolymer <int> (default 4)\n"
        << "    --filter-low-complexity --min-shannon-entropy <float> (default 1.5)\n"
        << "    --filter-dinucleotide-repeats\n"
+       << "    --filter-trinucleotide-repeats\n"
+       << "    --filter-tetranucleotide-repeats\n"
        << "    --filter-restriction-sites\n"
        << "    --filter-functional-motifs\n"
        << "    --include-motif-metadata  (add per-row motif info to output)\n";
