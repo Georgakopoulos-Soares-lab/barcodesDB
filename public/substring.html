@@ -164,30 +164,6 @@
                   </div>
                 </details>
 
-                <!-- Dinucleotide repeats -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-                  <input type="checkbox" id="filterDinuclRepeats" />
-                  <label for="filterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
-                  <span class="pill" style="font-size:11px">≥6 bp</span>
-                </div>
-                <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive dinucleotide repeats (≥6 bp). e.g., ATATAT, CACACAC. Excludes homopolymer runs.</div>
-
-                <!-- Trinucleotide repeats -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-                  <input type="checkbox" id="filterTrinuclRepeats" />
-                  <label for="filterTrinuclRepeats" style="font-weight:600;font-size:0.9em">Filter trinucleotide repeats</label>
-                  <span class="pill" style="font-size:11px">≥9 bp</span>
-                </div>
-                <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive trinucleotide repeats (≥9 bp). e.g., CAGCAGCAG, ATCATCATC.</div>
-
-                <!-- Tetranucleotide repeats -->
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-                  <input type="checkbox" id="filterTetranuclRepeats" />
-                  <label for="filterTetranuclRepeats" style="font-weight:600;font-size:0.9em">Filter tetranucleotide repeats</label>
-                  <span class="pill" style="font-size:11px">≥12 bp</span>
-                </div>
-                <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive tetranucleotide repeats (≥12 bp). e.g., GATAGATAGATA.</div>
-
                 <!-- Restriction sites — expandable list -->
                 <details class="details" style="margin-bottom:6px" id="reSitesDetails">
                   <summary style="display:flex;align-items:center;gap:8px">
@@ -213,6 +189,30 @@
                     <div id="funcMotifGrid" style="display:grid;grid-template-columns:1fr;gap:3px 8px"></div>
                   </div>
                 </details>
+
+                <!-- Dinucleotide repeats -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <input type="checkbox" id="filterDinuclRepeats" />
+                  <label for="filterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
+                  <span class="pill" style="font-size:11px">≥6 bp</span>
+                </div>
+                <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive dinucleotide repeats (≥6 bp). e.g., ATATAT, CACACAC. Excludes homopolymer runs.</div>
+
+                <!-- Trinucleotide repeats -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <input type="checkbox" id="filterTrinuclRepeats" />
+                  <label for="filterTrinuclRepeats" style="font-weight:600;font-size:0.9em">Filter trinucleotide repeats</label>
+                  <span class="pill" style="font-size:11px">≥9 bp</span>
+                </div>
+                <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive trinucleotide repeats (≥9 bp). e.g., CAGCAGCAG, ATCATCATC.</div>
+
+                <!-- Tetranucleotide repeats -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <input type="checkbox" id="filterTetranuclRepeats" />
+                  <label for="filterTetranuclRepeats" style="font-weight:600;font-size:0.9em">Filter tetranucleotide repeats</label>
+                  <span class="pill" style="font-size:11px">≥12 bp</span>
+                </div>
+                <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive tetranucleotide repeats (≥12 bp). e.g., GATAGATAGATA.</div>
               </div>
             </details>
 
@@ -668,11 +668,7 @@
             </div>
             <div class="help">${page?.hasMore ? 'More pages available.' : 'No more pages.'}</div>
           </div>
-          ${page?.motif_filter_applied ? `
-          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-            <span class="pill">Motif mode: ${page.motif_mode || 'flag'}</span>
-            <span class="pill">Filtered/flagged: ${page.motif_fail_count ?? page?.motifMeta?.motif_filtered_count ?? 0}</span>
-          </div>` : page?.motifMeta?.motif_filter_applied ? `
+          ${page?.motifMeta?.motif_filter_applied ? `
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
             <span class="pill">Motif mode: ${page.motifMeta.motif_mode || 'flag'}</span>
             <span class="pill">Filtered: ${page.motifMeta.motif_filtered_count ?? 0}</span>
@@ -700,7 +696,6 @@
       }
 
       const hasMotif = !!(page?.motif_filter_applied);
-      const isFlag = hasMotif && page?.motif_mode === 'flag';
       const colSpan = hasMotif ? 8 : 6;
 
       const rows = viewResults.map(r => {
@@ -710,7 +705,7 @@
         if (hasMotif) {
           const passes = r.motif_passes !== undefined ? (r.motif_passes ? '✓' : '✗') : '—';
           const hits = r.motif_hits || '';
-          motifCells = `<td style="text-align:center">${passes}</td><td style="max-width:320px;word-break:break-all;font-size:0.82em">${hits || '—'}</td>`;
+          motifCells = `<td>${passes}</td><td style="max-width:280px;word-break:break-all;font-size:0.82em">${hits || '—'}</td>`;
         }
         return `
           <tr>
@@ -737,7 +732,7 @@
                   <th>C</th>
                   <th>G</th>
                   <th>T</th>
-                  ${hasMotif ? '<th>Passes</th><th>Motif hits</th>' : ''}
+                  ${hasMotif ? '<th>Motif passes</th><th>Motif hits</th>' : ''}
                 </tr>
               </thead>
               <tbody>
@@ -790,19 +785,12 @@
       if (dlBtn) {
         dlBtn.onclick = () => {
           const src = (viewResults || []);
-          const headers = ['kmer', 'gc_pct', 'A', 'C', 'G', 'T'];
-          if (hasMotif) { headers.push('motif_passes', 'motif_hits'); }
           const rows = [
-            headers,
+            ['kmer', 'gc_pct', 'A', 'C', 'G', 'T'],
             ...src.map(r => {
               const comp = r.comp || {A:0,C:0,G:0,T:0};
               const gc = (r.gc ?? 0);
-              const row = [r.kmer, Number(gc).toFixed(2), comp.A ?? 0, comp.C ?? 0, comp.G ?? 0, comp.T ?? 0];
-              if (hasMotif) {
-                row.push(r.motif_passes !== undefined ? (r.motif_passes ? 1 : 0) : '');
-                row.push(r.motif_hits || '');
-              }
-              return row;
+              return [r.kmer, Number(gc).toFixed(2), comp.A ?? 0, comp.C ?? 0, comp.G ?? 0, comp.T ?? 0];
             })
           ];
           const stamp = new Date().toISOString().replace(/[:.]/g, '-');

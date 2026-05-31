@@ -63,6 +63,100 @@
           <button class="btn" id="genRun" style="white-space:nowrap">Generate</button>
         </div>
       </div>
+
+      <!-- Motif filters -->
+      <details class="details" style="margin-top:14px" id="genMotifDetails">
+        <summary style="display:flex;align-items:center;gap:10px">
+          <span style="font-weight:700">Motif filters</span>
+          <span class="help" id="genMotifSummary">Off</span>
+        </summary>
+        <div class="details-body">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <label class="help">Mode:</label>
+            <select id="genMotifMode" class="input" style="width:auto">
+              <option value="off">Off</option>
+              <option value="exclude">Exclude flagged</option>
+              <option value="flag">Flag only (keep all)</option>
+            </select>
+          </div>
+
+          <!-- Homopolymers -->
+          <details class="details" style="margin-bottom:6px">
+            <summary style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="genFilterHomopolymers" style="margin:0" />
+              <span style="font-weight:600;font-size:0.9em">Filter homopolymer runs</span>
+              <span class="pill" style="font-size:11px">AAAAA…</span>
+            </summary>
+            <div class="details-body">
+              <label class="help">Max run length:</label>
+              <input class="input" type="number" id="genMaxHomopolymer" min="1" max="20" value="4" style="width:70px" />
+              <div class="help" style="margin-top:6px">Consecutive runs of the same base longer than this threshold. e.g., AAAAA (5 A's) fails with max=4.</div>
+            </div>
+          </details>
+
+          <!-- Low complexity -->
+          <details class="details" style="margin-bottom:6px">
+            <summary style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="genFilterLowComplexity" style="margin:0" />
+              <span style="font-weight:600;font-size:0.9em">Filter low-complexity sequences</span>
+              <span class="pill" style="font-size:11px">entropy</span>
+            </summary>
+            <div class="details-body">
+              <label class="help">Min Shannon entropy:</label>
+              <input class="input" type="number" id="genMinShannonEntropy" min="0" max="2" step="0.1" value="1.5" style="width:70px" />
+              <div class="help" style="margin-top:6px">Shannon entropy H = −Σ(p·log₂p). Max = 2.0. Sequences below threshold are flagged.</div>
+            </div>
+          </details>
+
+          <!-- Restriction sites -->
+          <details class="details" style="margin-bottom:6px" id="genReSitesDetails">
+            <summary style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="genFilterRestrictionSites" style="margin:0" />
+              <span style="font-weight:600;font-size:0.9em">Filter common restriction sites</span>
+              <span class="pill" style="font-size:11px" id="genReSiteCount">50 sites</span>
+            </summary>
+            <div class="details-body" style="max-height:300px;overflow-y:auto">
+              <div class="help" style="margin-bottom:8px">Both forward and reverse-complement strands are scanned.</div>
+              <div id="genReSitesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px 8px"></div>
+            </div>
+          </details>
+
+          <!-- Functional motifs -->
+          <details class="details" style="margin-bottom:6px" id="genFuncMotifDetails">
+            <summary style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="genFilterFunctionalMotifs" style="margin:0" />
+              <span style="font-weight:600;font-size:0.9em">Flag short functional-like motifs</span>
+              <span class="pill" style="font-size:11px" id="genFuncMotifCount">25 motifs</span>
+            </summary>
+            <div class="details-body" style="max-height:300px;overflow-y:auto">
+              <div class="help" style="margin-bottom:8px">Conservative sequence patterns (TATA box, poly-A signals, CpG, etc.). Both strands scanned.</div>
+              <div id="genFuncMotifGrid" style="display:grid;grid-template-columns:1fr;gap:3px 8px"></div>
+            </div>
+          </details>
+
+          <!-- Repeat filters (last) -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <input type="checkbox" id="genFilterDinuclRepeats" />
+            <label for="genFilterDinuclRepeats" style="font-weight:600;font-size:0.9em">Filter dinucleotide repeats</label>
+            <span class="pill" style="font-size:11px">≥6 bp</span>
+          </div>
+          <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive dinucleotide repeats (≥6 bp). e.g., ATATAT, CACACAC. Excludes homopolymer runs.</div>
+
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <input type="checkbox" id="genFilterTrinuclRepeats" />
+            <label for="genFilterTrinuclRepeats" style="font-weight:600;font-size:0.9em">Filter trinucleotide repeats</label>
+            <span class="pill" style="font-size:11px">≥9 bp</span>
+          </div>
+          <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive trinucleotide repeats (≥9 bp). e.g., CAGCAGCAG, ATCATCATC.</div>
+
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <input type="checkbox" id="genFilterTetranuclRepeats" />
+            <label for="genFilterTetranuclRepeats" style="font-weight:600;font-size:0.9em">Filter tetranucleotide repeats</label>
+            <span class="pill" style="font-size:11px">≥12 bp</span>
+          </div>
+          <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive tetranucleotide repeats (≥12 bp). e.g., GATAGATAGATA.</div>
+        </div>
+      </details>
     </div>
 
     <div id="genResults" style="margin-top:20px"></div>
@@ -78,6 +172,94 @@
     const genGcMax = document.getElementById('genGcMax');
     const genSubstring = document.getElementById('genSubstring');
     const genResults = document.getElementById('genResults');
+
+    // ── RE sites & functional motifs (mirrored from substring/kmer pages) ──────
+    const RE_SITES = [
+      ["EcoRI","GAATTC"],["BamHI","GGATCC"],["HindIII","AAGCTT"],["NotI","GCGGCCGC"],
+      ["XhoI","CTCGAG"],["XbaI","TCTAGA"],["SpeI","ACTAGT"],["NheI","GCTAGC"],
+      ["PstI","CTGCAG"],["KpnI","GGTACC"],["SacI","GAGCTC"],["SalI","GTCGAC"],
+      ["SmaI","CCCGGG"],["MluI","ACGCGT"],["AgeI","ACCGGT"],["BglII","AGATCT"],
+      ["AatII","GACGTC"],["AccI","GTATAC"],["AflII","CTTAAG"],["AscI","GGCGCGCC"],
+      ["AvrII","CCTAGG"],["BclI","TGATCA"],["BsiWI","CGTACG"],["BspHI","TCATGA"],
+      ["BsrGI","TGTACA"],["BssHII","GCGCGC"],["ClaI","ATCGAT"],["DraI","TTTAAA"],
+      ["EcoRV","GATATC"],["FseI","GGCCGGCC"],["HpaI","GTTAAC"],["MfeI","CAATTG"],
+      ["NcoI","CCATGG"],["NdeI","CATATG"],["NruI","TCGCGA"],["PacI","TTAATTAA"],
+      ["PmeI","GTTTAAAC"],["PvuII","CAGCTG"],["SbfI","CCTGCAGG"],["ScaI","AGTACT"],
+      ["SnaBI","TACGTA"],["SspI","AATATT"],["StuI","AGGCCT"],["SwaI","ATTTAAAT"],
+      ["AluI","AGCT"],["HaeIII","GGCC"],["MseI","TTAA"],["MspI","CCGG"],
+      ["RsaI","GTAC"],["TaqI","TCGA"]
+    ];
+    const FUNC_MOTIFS = [
+      ["TATA_box","TATAAA"],["GC_box","GGGCGG"],["CCAAT_box","CCAAT"],
+      ["CRE","TGACGTCA"],["E_box_canonical","CACGTG"],["AP1_site","TGACTCA"],
+      ["NFkB_site","GGGACTTTCC"],["STAT3_site","TTCCGGGAA"],["OCT4_site","ATGCAAAT"],
+      ["E2F_site","TTTCCCGC"],["Ets_binding_core","CCGGAAGT"],
+      ["polyA_signal","AATAAA"],["alt_polyA_signal","ATTAAA"],
+      ["polyA_variant_AATACA","AATACA"],["polyA_variant_GATAAA","GATAAA"],
+      ["polyA_variant_AATAGA","AATAGA"],["polyA_variant_AATGAA","AATGAA"],
+      ["ARE_mRNA_stability","ATTTAT"],["splice_donor_like","GTAGT"],
+      ["splice_acceptor_like","CAGG"],["Kozak_like_core","ACCATGG"],
+      ["Shine_Dalgarno","AGGAGG"],["Pribnow_box","TATAAT"],
+      ["minus35_sigma70","TTGACA"],["CpG","CG"]
+    ];
+
+    // ── Populate motif grids ──────────────────────────────────────────────────
+    (function populateMotifGrids() {
+      function addGridCheckAll(gridEl, countEl, items, label) {
+        const bar = document.createElement('div');
+        bar.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;align-items:center';
+        const btnAll = document.createElement('button'); btnAll.type = 'button';
+        btnAll.className = 'btn secondary'; btnAll.style.cssText = 'padding:3px 10px;font-size:11px';
+        btnAll.textContent = 'Check all';
+        const btnNone = document.createElement('button'); btnNone.type = 'button';
+        btnNone.className = 'btn secondary'; btnNone.style.cssText = 'padding:3px 10px;font-size:11px';
+        btnNone.textContent = 'Uncheck all';
+        bar.appendChild(btnAll); bar.appendChild(btnNone); gridEl.appendChild(bar);
+        btnAll.onclick = () => gridEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+        btnNone.onclick = () => gridEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+        if (countEl) countEl.textContent = items.length + ' ' + label;
+      }
+      function addItems(gridEl, items) {
+        items.forEach(([name, motif]) => {
+          const row = document.createElement('label');
+          row.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;padding:1px 0;cursor:pointer';
+          const cb = document.createElement('input'); cb.type = 'checkbox'; cb.dataset.motif = motif;
+          cb.style.cssText = 'margin:0;accent-color:#1b5e20';
+          const ms = document.createElement('span'); ms.style.cssText = 'font-family:monospace;font-weight:600'; ms.textContent = motif;
+          const ns = document.createElement('span'); ns.className = 'help'; ns.textContent = name;
+          row.appendChild(cb); row.appendChild(ms); row.appendChild(ns);
+          gridEl.appendChild(row);
+        });
+      }
+      const reGrid = document.getElementById('genReSitesGrid');
+      if (reGrid) { addGridCheckAll(reGrid, document.getElementById('genReSiteCount'), RE_SITES, 'sites'); addItems(reGrid, RE_SITES); }
+      const fmGrid = document.getElementById('genFuncMotifGrid');
+      if (fmGrid) { addGridCheckAll(fmGrid, document.getElementById('genFuncMotifCount'), FUNC_MOTIFS, 'motifs'); addItems(fmGrid, FUNC_MOTIFS); }
+    })();
+
+    // ── Motif summary label ───────────────────────────────────────────────────
+    function updateGenMotifSummary() {
+      const mode = document.getElementById('genMotifMode')?.value || 'off';
+      const el = document.getElementById('genMotifSummary');
+      if (!el) return;
+      if (mode === 'off') { el.textContent = 'Off'; return; }
+      const parts = [mode === 'flag' ? 'Flag' : 'Exclude'];
+      if (document.getElementById('genFilterHomopolymers')?.checked) parts.push('Homopolymers');
+      if (document.getElementById('genFilterLowComplexity')?.checked) parts.push('Low complexity');
+      if (document.getElementById('genFilterRestrictionSites')?.checked) parts.push('Restriction sites');
+      if (document.getElementById('genFilterFunctionalMotifs')?.checked) parts.push('Functional motifs');
+      if (document.getElementById('genFilterDinuclRepeats')?.checked) parts.push('Dinucl repeats');
+      if (document.getElementById('genFilterTrinuclRepeats')?.checked) parts.push('Trinucl repeats');
+      if (document.getElementById('genFilterTetranuclRepeats')?.checked) parts.push('Tetranucl repeats');
+      el.textContent = parts.join(' + ');
+    }
+    ['genMotifMode','genFilterHomopolymers','genMaxHomopolymer','genFilterLowComplexity',
+     'genMinShannonEntropy','genFilterRestrictionSites','genFilterFunctionalMotifs',
+     'genFilterDinuclRepeats','genFilterTrinuclRepeats','genFilterTetranuclRepeats']
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.addEventListener('change', updateGenMotifSummary); el.addEventListener('input', updateGenMotifSummary); }
+      });
 
     function downloadGenText(filename, text) {
       const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -96,40 +278,86 @@
       const gc_max = parseInt(genGcMax.value, 10) || 100;
       const substring = genSubstring.value.trim();
 
+      // Collect motif options
+      const motif_mode = document.getElementById('genMotifMode')?.value || 'off';
+      const motif = { motif_mode };
+      if (motif_mode !== 'off') {
+        if (document.getElementById('genFilterHomopolymers')?.checked) {
+          motif.filter_homopolymers = true;
+          motif.max_homopolymer = parseInt(document.getElementById('genMaxHomopolymer')?.value, 10) || 4;
+        }
+        if (document.getElementById('genFilterLowComplexity')?.checked) {
+          motif.filter_low_complexity = true;
+          motif.min_shannon_entropy = parseFloat(document.getElementById('genMinShannonEntropy')?.value) || 1.5;
+        }
+        if (document.getElementById('genFilterDinuclRepeats')?.checked) motif.filter_dinucleotide_repeats = true;
+        if (document.getElementById('genFilterTrinuclRepeats')?.checked) motif.filter_trinucleotide_repeats = true;
+        if (document.getElementById('genFilterTetranuclRepeats')?.checked) motif.filter_tetranucleotide_repeats = true;
+        if (document.getElementById('genFilterRestrictionSites')?.checked) {
+          motif.filter_restriction_sites = true;
+          const sel = Array.from(document.querySelectorAll('#genReSitesGrid input[type=checkbox]:checked'))
+            .map(cb => cb.dataset.motif).filter(Boolean);
+          if (sel.length > 0) motif.restriction_site_list = sel;
+        }
+        if (document.getElementById('genFilterFunctionalMotifs')?.checked) {
+          motif.filter_functional_motifs = true;
+          const sel = Array.from(document.querySelectorAll('#genFuncMotifGrid input[type=checkbox]:checked'))
+            .map(cb => cb.dataset.motif).filter(Boolean);
+          if (sel.length > 0) motif.functional_motif_list = sel;
+        }
+      }
+
       try {
         const resp = await fetch('/api/generate-random-kmers', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ k, n, gc_min, gc_max, substring })
+          body: JSON.stringify({ k, n, gc_min, gc_max, substring, ...motif })
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Request failed');
 
         if (data.n_returned === 0) {
-          genResults.innerHTML = '<div class="card note">No k-mers matched the criteria. Try widening the GC range or removing the substring constraint.</div>';
+          genResults.innerHTML = '<div class="card note">No k-mers matched the criteria. Try widening the GC range or removing constraints.</div>';
           return;
         }
 
+        const hasFlag = !!(data.motif_filter_applied && data.motif_mode === 'flag');
+
         let html = '<div class="card">';
-        html += `<div style="font-weight:800;margin-bottom:8px">Generated ${data.n_returned} of ${data.n_requested} requested ${data.k}-mers (GC ${data.gc_min}–${data.gc_max}%${data.substring ? ', contains "' + data.substring + '"' : ''})</div>`;
+        html += `<div style="font-weight:800;margin-bottom:8px">Generated ${data.n_returned} of ${data.n_requested} requested ${data.k}-mers`;
+        html += ` (GC ${data.gc_min}–${data.gc_max}%${data.substring ? ', contains "' + data.substring + '"' : ''}`;
+        if (data.motif_filter_applied) html += `, motif: ${data.motif_mode}`;
+        html += ')</div>';
 
         if (data.n_returned < data.n_requested) {
           html += `<div class="note" style="margin-bottom:8px">Only ${data.n_returned} generated after ${data.attempts} attempts — criteria may be too restrictive.</div>`;
         }
 
-        html += '<table class="table"><thead><tr><th>#</th><th>K-mer</th><th>GC%</th><th>A</th><th>C</th><th>G</th><th>T</th></tr></thead><tbody>';
+        html += '<table class="table"><thead><tr><th>#</th><th>K-mer</th><th>GC%</th><th>A</th><th>C</th><th>G</th><th>T</th>';
+        if (hasFlag) html += '<th>Passes</th><th>Motif hits</th>';
+        html += '</tr></thead><tbody>';
         data.results.forEach((r, i) => {
           html += `<tr>
             <td>${i + 1}</td>
             <td class="kmer">${r.kmer}</td>
             <td>${r.gc.toFixed(1)}</td>
-            <td>${r.comp.A || 0}</td><td>${r.comp.C || 0}</td><td>${r.comp.G || 0}</td><td>${r.comp.T || 0}</td>
-          </tr>`;
+            <td>${r.comp.A || 0}</td><td>${r.comp.C || 0}</td><td>${r.comp.G || 0}</td><td>${r.comp.T || 0}</td>`;
+          if (hasFlag) {
+            html += `<td style="text-align:center">${r.motif_passes ? '✓' : '✗'}</td>`;
+            html += `<td style="max-width:320px;word-break:break-all;font-size:0.82em">${r.motif_hits || '—'}</td>`;
+          }
+          html += '</tr>';
         });
         html += '</tbody></table>';
 
-        const tsvRows = [['kmer', 'gc_pct', 'A', 'C', 'G', 'T']];
-        data.results.forEach(r => tsvRows.push([r.kmer, r.gc.toFixed(1), r.comp.A || 0, r.comp.C || 0, r.comp.G || 0, r.comp.T || 0]));
+        const tsvHeaders = ['kmer','gc_pct','A','C','G','T'];
+        if (hasFlag) tsvHeaders.push('motif_passes', 'motif_hits');
+        const tsvRows = [tsvHeaders];
+        data.results.forEach(r => {
+          const row = [r.kmer, r.gc.toFixed(1), r.comp.A||0, r.comp.C||0, r.comp.G||0, r.comp.T||0];
+          if (hasFlag) row.push(r.motif_passes ? 1 : 0, r.motif_hits || '');
+          tsvRows.push(row);
+        });
         const tsv = tsvRows.map(row => row.join('\t')).join('\n') + '\n';
         const stamp = new Date().toISOString().replace(/[:.]/g, '-');
         html += `<button class="btn secondary" style="margin-top:8px" id="dlBtn">Download TSV</button>`;

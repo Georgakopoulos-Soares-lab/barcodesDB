@@ -143,6 +143,127 @@ function gcContent(seq) {
   return (gc * 100.0) / seq.length;
 }
 
+// ── Motif filtering helpers for the random-generate endpoint ──────────────────
+const GEN_RE_SITES = [
+  ['EcoRI','GAATTC'],['BamHI','GGATCC'],['HindIII','AAGCTT'],['NotI','GCGGCCGC'],
+  ['XhoI','CTCGAG'],['XbaI','TCTAGA'],['SpeI','ACTAGT'],['NheI','GCTAGC'],
+  ['PstI','CTGCAG'],['KpnI','GGTACC'],['SacI','GAGCTC'],['SalI','GTCGAC'],
+  ['SmaI','CCCGGG'],['MluI','ACGCGT'],['AgeI','ACCGGT'],['BglII','AGATCT'],
+  ['AatII','GACGTC'],['AccI','GTATAC'],['AflII','CTTAAG'],['AscI','GGCGCGCC'],
+  ['AvrII','CCTAGG'],['BclI','TGATCA'],['BsiWI','CGTACG'],['BspHI','TCATGA'],
+  ['BsrGI','TGTACA'],['BssHII','GCGCGC'],['ClaI','ATCGAT'],['DraI','TTTAAA'],
+  ['EcoRV','GATATC'],['FseI','GGCCGGCC'],['HpaI','GTTAAC'],['MfeI','CAATTG'],
+  ['NcoI','CCATGG'],['NdeI','CATATG'],['NruI','TCGCGA'],['PacI','TTAATTAA'],
+  ['PmeI','GTTTAAAC'],['PvuII','CAGCTG'],['SbfI','CCTGCAGG'],['ScaI','AGTACT'],
+  ['SnaBI','TACGTA'],['SspI','AATATT'],['StuI','AGGCCT'],['SwaI','ATTTAAAT'],
+  ['AluI','AGCT'],['HaeIII','GGCC'],['MseI','TTAA'],['MspI','CCGG'],['RsaI','GTAC'],['TaqI','TCGA']
+];
+const GEN_FUNC_MOTIFS = [
+  ['TATA_box','TATAAA'],['GC_box','GGGCGG'],['CCAAT_box','CCAAT'],
+  ['CRE','TGACGTCA'],['E_box_canonical','CACGTG'],['AP1_site','TGACTCA'],
+  ['NFkB_site','GGGACTTTCC'],['STAT3_site','TTCCGGGAA'],['OCT4_site','ATGCAAAT'],
+  ['E2F_site','TTTCCCGC'],['Ets_binding_core','CCGGAAGT'],
+  ['polyA_signal','AATAAA'],['alt_polyA_signal','ATTAAA'],
+  ['polyA_variant_AATACA','AATACA'],['polyA_variant_GATAAA','GATAAA'],
+  ['polyA_variant_AATAGA','AATAGA'],['polyA_variant_AATGAA','AATGAA'],
+  ['ARE_mRNA_stability','ATTTAT'],['splice_donor_like','GTAGT'],
+  ['splice_acceptor_like','CAGG'],['Kozak_like_core','ACCATGG'],
+  ['Shine_Dalgarno','AGGAGG'],['Pribnow_box','TATAAT'],
+  ['minus35_sigma70','TTGACA'],['CpG','CG']
+];
+
+function revComp(seq) {
+  const m = { A:'T', T:'A', C:'G', G:'C' };
+  return seq.split('').reverse().map(b => m[b] || b).join('');
+}
+
+// Returns { passes: bool, hits: string } — hits is pipe-joined descriptor list
+function evaluateMotifFilter(kmer, opts) {
+  const up = kmer.toUpperCase();
+  const rc = revComp(up);
+  const hitList = [];
+
+  if (opts.filter_homopolymers) {
+    const maxRun = opts.max_homopolymer || 4;
+    let run = 1, runStart = 0;
+    for (let i = 1; i <= up.length; i++) {
+      if (i < up.length && up[i] === up[i-1]) { run++; }
+      else {
+        if (run > maxRun) hitList.push(`homopolymer:${up.substring(runStart, i)}@${runStart}`);
+        run = 1; runStart = i;
+      }
+    }
+  }
+
+  if (opts.filter_low_complexity) {
+    const minH = opts.min_shannon_entropy || 1.5;
+    const cnt = { A:0, C:0, G:0, T:0 };
+    for (const b of up) cnt[b] = (cnt[b] || 0) + 1;
+    let H = 0;
+    for (const c of Object.values(cnt)) {
+      if (c > 0) { const p = c / up.length; H -= p * Math.log2(p); }
+    }
+    if (H < minH) hitList.push(`low_complexity:H=${H.toFixed(2)}`);
+  }
+
+  if (opts.filter_dinucleotide_repeats) {
+    for (let i = 0; i + 6 <= up.length; i++) {
+      const di = up.substring(i, i + 2);
+      if (di[0] !== di[1]) {
+        let j = i + 2;
+        while (j + 2 <= up.length && up.substring(j, j + 2) === di) j += 2;
+        if (j - i >= 6) { hitList.push(`dinucl_repeat:${di}@${i}`); i = j - 1; }
+      }
+    }
+  }
+
+  if (opts.filter_trinucleotide_repeats) {
+    for (let i = 0; i + 9 <= up.length; i++) {
+      const tri = up.substring(i, i + 3);
+      let j = i + 3;
+      while (j + 3 <= up.length && up.substring(j, j + 3) === tri) j += 3;
+      if (j - i >= 9) { hitList.push(`trinucl_repeat:${tri}@${i}`); i = j - 1; }
+    }
+  }
+
+  if (opts.filter_tetranucleotide_repeats) {
+    for (let i = 0; i + 12 <= up.length; i++) {
+      const tetra = up.substring(i, i + 4);
+      let j = i + 4;
+      while (j + 4 <= up.length && up.substring(j, j + 4) === tetra) j += 4;
+      if (j - i >= 12) { hitList.push(`tetranucl_repeat:${tetra}@${i}`); i = j - 1; }
+    }
+  }
+
+  if (opts.filter_restriction_sites) {
+    const sites = (opts.restriction_site_list && opts.restriction_site_list.length > 0)
+      ? opts.restriction_site_list.map(s => ['custom', s])
+      : GEN_RE_SITES;
+    for (const [name, seq] of sites) {
+      let idx = up.indexOf(seq);
+      if (idx >= 0) hitList.push(`restriction_site:${name}:${seq}@${idx}`);
+      else { idx = rc.indexOf(seq); if (idx >= 0) hitList.push(`restriction_site:${name}:${seq}@rc${idx}`); }
+    }
+  }
+
+  if (opts.filter_functional_motifs) {
+    const motifs = (opts.functional_motif_list && opts.functional_motif_list.length > 0)
+      ? opts.functional_motif_list.map(s => ['custom', s])
+      : GEN_FUNC_MOTIFS;
+    for (const [name, seq] of motifs) {
+      let idx = up.indexOf(seq);
+      if (idx >= 0) hitList.push(`functional_motif:${name}:${seq}@${idx}`);
+      else { idx = rc.indexOf(seq); if (idx >= 0) hitList.push(`functional_motif:${name}:${seq}@rc${idx}`); }
+    }
+  }
+
+  return { passes: hitList.length === 0, hits: hitList.join('|') };
+}
+
+function passesMotifFilter(kmer, opts) {
+  return evaluateMotifFilter(kmer, opts).passes;
+}
+
 function ntComp(seq) {
   const r = { A: 0, C: 0, G: 0, T: 0 };
   for (const c of seq.toUpperCase()) if (r[c] !== undefined) r[c]++;
@@ -521,8 +642,11 @@ app.post('/api/generate-random-kmers', async (req, res) => {
 
     const bases = ['A', 'C', 'G', 'T'];
     const results = [];
-    const MAX_ATTEMPTS = n * 200;  // safety limit
+    const MAX_ATTEMPTS = n * 500;  // more attempts since motif filter may reject many
     let attempts = 0;
+
+    const motifOpts = parseMotifOptions(body);
+    const motifActive = !!(motifOpts.motif_mode && motifOpts.motif_mode !== 'off');
 
     while (results.length < n && attempts < MAX_ATTEMPTS) {
       attempts++;
@@ -536,6 +660,8 @@ app.post('/api/generate-random-kmers', async (req, res) => {
       if (gc < gcMin || gc > gcMax) continue;
       // Check substring (if specified)
       if (substring && !kmer.includes(substring)) continue;
+      // Check motif filter (exclude mode rejects; flag mode accepts all but annotates)
+      if (motifActive && motifOpts.motif_mode === 'exclude' && !passesMotifFilter(kmer, motifOpts)) continue;
       results.push(kmer);
     }
 
@@ -547,11 +673,17 @@ app.post('/api/generate-random-kmers', async (req, res) => {
       gc_max: gcMax,
       substring: substring || null,
       attempts,
-      results: results.map(kmer => ({
-        kmer,
-        gc: gcContent(kmer),
-        comp: ntComp(kmer),
-      })),
+      motif_filter_applied: motifActive,
+      motif_mode: motifActive ? motifOpts.motif_mode : undefined,
+      results: results.map(kmer => {
+        const r = { kmer, gc: gcContent(kmer), comp: ntComp(kmer) };
+        if (motifActive && motifOpts.motif_mode === 'flag') {
+          const ev = evaluateMotifFilter(kmer, motifOpts);
+          r.motif_passes = ev.passes;
+          r.motif_hits = ev.hits;
+        }
+        return r;
+      }),
     });
   } catch (err) {
     console.error(err);
