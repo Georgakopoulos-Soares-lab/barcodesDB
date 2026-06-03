@@ -78,6 +78,7 @@ function renderResults(container, data) {
     if (mo.filter_tetranucleotide_repeats) optsHtml += `<span class="pill">Tetranucleotide repeats</span>`;
     if (mo.filter_restriction_sites) optsHtml += `<span class="pill">Restriction sites</span>`;
     if (mo.filter_functional_motifs) optsHtml += `<span class="pill">Functional motifs</span>`;
+    if (mo.filter_custom_motif) optsHtml += `<span class="pill">Custom motif: ${mo.custom_motif_seq || ''}</span>`;
     mhdr.innerHTML = `
       <div style="font-weight:800;margin-bottom:8px">Sequence Motif Filters</div>
       <div class="row" style="gap:16px">

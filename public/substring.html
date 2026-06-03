@@ -20,6 +20,7 @@
         <a href="/kmer">K-mer Lookup</a>
         <a class="active" href="/substring">Search barcodes</a>
         <a href="/generate">Generate barcodes</a>
+        <a href="/about">About</a>
       </nav>
     </div>
 
@@ -213,6 +214,16 @@
                   <span class="pill" style="font-size:11px">≥12 bp</span>
                 </div>
                 <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive tetranucleotide repeats (≥12 bp). e.g., GATAGATAGATA.</div>
+
+                <!-- Custom sequence motif -->
+                <div style="display:flex;align-items:center;gap:10px;margin-top:4px;margin-bottom:4px">
+                  <input type="checkbox" id="filterCustomMotif" />
+                  <label for="filterCustomMotif" style="font-weight:600;font-size:0.9em">Filter custom sequence motif</label>
+                </div>
+                <div id="customMotifInputWrap" style="display:none;margin-left:28px;margin-bottom:10px">
+                  <input class="input" type="text" id="customMotifSeq" placeholder="e.g., ACGT" style="width:220px" maxlength="50" />
+                  <div class="help" style="margin-top:4px">DNA sequence (A/C/G/T only). Both forward and reverse-complement strands are scanned. Tagged as <code>custom_motif_&lt;SEQ&gt;</code> in results.</div>
+                </div>
               </div>
             </details>
 
@@ -473,6 +484,13 @@
           .map(cb => cb.dataset.motif).filter(Boolean);
         if (selectedFM.length > 0) b.functional_motif_list = selectedFM;
       }
+      if (document.getElementById('filterCustomMotif')?.checked) {
+        const seq = document.getElementById('customMotifSeq')?.value.trim().toUpperCase();
+        if (seq && /^[ACGT]+$/.test(seq)) {
+          b.filter_custom_motif = true;
+          b.custom_motif_seq = seq;
+        }
+      }
       return b;
     }
 
@@ -489,6 +507,7 @@
       if (document.getElementById('filterTetranuclRepeats')?.checked) parts.push('Tetranucleotide repeats');
       if (document.getElementById('filterRestrictionSites')?.checked) parts.push('Restriction sites');
       if (document.getElementById('filterFunctionalMotifs')?.checked) parts.push('Functional motifs');
+      if (document.getElementById('filterCustomMotif')?.checked) parts.push('Custom motif');
       summary.textContent = parts.join(' + ');
     }
 
@@ -1154,6 +1173,15 @@
   // ConstructK UX
   constructKInp.addEventListener('input', () => { updateExpandInfo(); });
   constructKInp.addEventListener('change', () => { updateExpandInfo(); });
+
+    // Toggle custom motif input visibility
+    const customMotifCb = document.getElementById('filterCustomMotif');
+    const customMotifWrap = document.getElementById('customMotifInputWrap');
+    if (customMotifCb && customMotifWrap) {
+      customMotifCb.addEventListener('change', () => {
+        customMotifWrap.style.display = customMotifCb.checked ? 'block' : 'none';
+      });
+    }
 
     // Initial state
     resetFrontendFilters();

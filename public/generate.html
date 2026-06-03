@@ -20,6 +20,7 @@
         <a href="/kmer">K-mer Lookup</a>
         <a href="/substring">Search barcodes</a>
         <a class="active" href="/generate">Generate barcodes</a>
+        <a href="/about">About</a>
       </nav>
     </div>
 
@@ -155,6 +156,16 @@
             <span class="pill" style="font-size:11px">≥12 bp</span>
           </div>
           <div class="help" style="margin-left:28px;margin-bottom:10px">Detects ≥3 consecutive tetranucleotide repeats (≥12 bp). e.g., GATAGATAGATA.</div>
+
+          <!-- Custom sequence motif -->
+          <div style="display:flex;align-items:center;gap:10px;margin-top:4px;margin-bottom:4px">
+            <input type="checkbox" id="genFilterCustomMotif" />
+            <label for="genFilterCustomMotif" style="font-weight:600;font-size:0.9em">Filter custom sequence motif</label>
+          </div>
+          <div id="genCustomMotifInputWrap" style="display:none;margin-left:28px;margin-bottom:10px">
+            <input class="input" type="text" id="genCustomMotifSeq" placeholder="e.g., ACGT" style="width:220px" maxlength="50" />
+            <div class="help" style="margin-top:4px">DNA sequence (A/C/G/T only). Both forward and reverse-complement strands are scanned. Tagged as <code>custom_motif_&lt;SEQ&gt;</code> in results.</div>
+          </div>
         </div>
       </details>
     </div>
@@ -251,15 +262,25 @@
       if (document.getElementById('genFilterDinuclRepeats')?.checked) parts.push('Dinucl repeats');
       if (document.getElementById('genFilterTrinuclRepeats')?.checked) parts.push('Trinucl repeats');
       if (document.getElementById('genFilterTetranuclRepeats')?.checked) parts.push('Tetranucl repeats');
+      if (document.getElementById('genFilterCustomMotif')?.checked) parts.push('Custom motif');
       el.textContent = parts.join(' + ');
     }
     ['genMotifMode','genFilterHomopolymers','genMaxHomopolymer','genFilterLowComplexity',
      'genMinShannonEntropy','genFilterRestrictionSites','genFilterFunctionalMotifs',
-     'genFilterDinuclRepeats','genFilterTrinuclRepeats','genFilterTetranuclRepeats']
+     'genFilterDinuclRepeats','genFilterTrinuclRepeats','genFilterTetranuclRepeats',
+     'genFilterCustomMotif','genCustomMotifSeq']
       .forEach(id => {
         const el = document.getElementById(id);
         if (el) { el.addEventListener('change', updateGenMotifSummary); el.addEventListener('input', updateGenMotifSummary); }
       });
+    // Toggle custom motif input visibility
+    const genCustomMotifCb = document.getElementById('genFilterCustomMotif');
+    const genCustomMotifWrap = document.getElementById('genCustomMotifInputWrap');
+    if (genCustomMotifCb && genCustomMotifWrap) {
+      genCustomMotifCb.addEventListener('change', () => {
+        genCustomMotifWrap.style.display = genCustomMotifCb.checked ? 'block' : 'none';
+      });
+    }
 
     function downloadGenText(filename, text) {
       const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
@@ -304,6 +325,13 @@
           const sel = Array.from(document.querySelectorAll('#genFuncMotifGrid input[type=checkbox]:checked'))
             .map(cb => cb.dataset.motif).filter(Boolean);
           if (sel.length > 0) motif.functional_motif_list = sel;
+        }
+        if (document.getElementById('genFilterCustomMotif')?.checked) {
+          const seq = document.getElementById('genCustomMotifSeq')?.value.trim().toUpperCase();
+          if (seq && /^[ACGT]+$/.test(seq)) {
+            motif.filter_custom_motif = true;
+            motif.custom_motif_seq = seq;
+          }
         }
       }
 

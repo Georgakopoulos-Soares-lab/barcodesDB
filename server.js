@@ -55,6 +55,8 @@ function parseMotifOptions(body) {
     filter_tetranucleotide_repeats: false,
     filter_restriction_sites: false,
     filter_functional_motifs: false,
+    filter_custom_motif: false,
+    custom_motif_seq: '',
   };
 
   if (!body) return opts;
@@ -78,6 +80,39 @@ function parseMotifOptions(body) {
   opts.filter_tetranucleotide_repeats = toBool(body.filter_tetranucleotide_repeats);
   opts.filter_restriction_sites = toBool(body.filter_restriction_sites);
   opts.filter_functional_motifs = toBool(body.filter_functional_motifs);
+
+  // Custom motif sequence filter
+  opts.filter_custom_motif = toBool(body.filter_custom_motif);
+  if (opts.filter_custom_motif && body.custom_motif_seq !== undefined && body.custom_motif_seq !== null) {
+    const seq = String(body.custom_motif_seq).trim().toUpperCase();
+    if (/^[ACGT]+$/.test(seq) && seq.length > 0 && seq.length <= 50) {
+      opts.custom_motif_seq = seq;
+    } else {
+      opts.filter_custom_motif = false;
+    }
+  }
+
+  // restriction_site_list: array of specific site sequences to check (JSON array or comma-separated FormData string)
+  if (body.restriction_site_list !== undefined && body.restriction_site_list !== null) {
+    let items = [];
+    if (Array.isArray(body.restriction_site_list)) {
+      items = body.restriction_site_list;
+    } else if (typeof body.restriction_site_list === 'string' && body.restriction_site_list) {
+      items = body.restriction_site_list.split(',');
+    }
+    opts.restriction_site_list = items.map(s => String(s).trim().toUpperCase()).filter(s => /^[ACGT]+$/.test(s));
+  }
+
+  // functional_motif_list: array of specific motif sequences to check (JSON array or comma-separated FormData string)
+  if (body.functional_motif_list !== undefined && body.functional_motif_list !== null) {
+    let items = [];
+    if (Array.isArray(body.functional_motif_list)) {
+      items = body.functional_motif_list;
+    } else if (typeof body.functional_motif_list === 'string' && body.functional_motif_list) {
+      items = body.functional_motif_list.split(',');
+    }
+    opts.functional_motif_list = items.map(s => String(s).trim().toUpperCase()).filter(s => /^[ACGT]+$/.test(s));
+  }
 
   // max_homopolymer: default 4, minimum 1
   if (body.max_homopolymer !== undefined && body.max_homopolymer !== null && body.max_homopolymer !== '') {
@@ -126,9 +161,15 @@ function appendMotifArgs(args, opts) {
   }
   if (opts.filter_restriction_sites) {
     args.push('--filter-restriction-sites');
+    if (opts.restriction_site_list && opts.restriction_site_list.length > 0) {
+      args.push('--restriction-sites', opts.restriction_site_list.join(','));
+    }
   }
   if (opts.filter_functional_motifs) {
     args.push('--filter-functional-motifs');
+    if (opts.functional_motif_list && opts.functional_motif_list.length > 0) {
+      args.push('--functional-motifs', opts.functional_motif_list.join(','));
+    }
   }
 }
 
@@ -257,11 +298,54 @@ function evaluateMotifFilter(kmer, opts) {
     }
   }
 
+  if (opts.filter_custom_motif && opts.custom_motif_seq) {
+    const seq = opts.custom_motif_seq;
+    const seqRC = revComp(seq);
+    const tag = `custom_motif_${seq}`;
+    const fwdIdx = up.indexOf(seq);
+    if (fwdIdx >= 0) {
+      hitList.push(`${tag}@${fwdIdx}`);
+    } else if (seq !== seqRC) {
+      const rcIdx = up.indexOf(seqRC);
+      if (rcIdx >= 0) hitList.push(`${tag}(rc)@${rcIdx}`);
+    }
+  }
+
   return { passes: hitList.length === 0, hits: hitList.join('|') };
 }
 
 function passesMotifFilter(kmer, opts) {
   return evaluateMotifFilter(kmer, opts).passes;
+}
+
+// Apply custom motif post-processing to an array of result objects.
+// Checks each result's kmer for the custom sequence (both strands) and tags hits.
+function applyCustomMotifPostProcessing(results, opts) {
+  if (!opts.filter_custom_motif || !opts.custom_motif_seq) return;
+  const seq = opts.custom_motif_seq;
+  const seqRC = revComp(seq);
+  const tag = `custom_motif_${seq}`;
+  for (const result of results) {
+    if (result.motif_passes === undefined) result.motif_passes = true;
+    if (!result.motif_hits) result.motif_hits = '';
+    if (result.motif_hit_count === undefined) result.motif_hit_count = 0;
+    const up = result.kmer.toUpperCase();
+    const fwdIdx = up.indexOf(seq);
+    if (fwdIdx >= 0) {
+      const hit = `${tag}@${fwdIdx}`;
+      result.motif_hits = result.motif_hits ? result.motif_hits + '|' + hit : hit;
+      result.motif_passes = false;
+      result.motif_hit_count++;
+    } else if (seq !== seqRC) {
+      const rcIdx = up.indexOf(seqRC);
+      if (rcIdx >= 0) {
+        const hit = `${tag}(rc)@${rcIdx}`;
+        result.motif_hits = result.motif_hits ? result.motif_hits + '|' + hit : hit;
+        result.motif_passes = false;
+        result.motif_hit_count++;
+      }
+    }
+  }
 }
 
 function ntComp(seq) {
@@ -408,6 +492,7 @@ app.post('/api/query-kmer', upload.single('kmersFile'), async (req, res) => {
     let overallPassesMinHamming = true;
     let overallNearestHamming = Infinity;
     let motifApplied = (motifOpts.motif_mode !== 'off');
+    const customMotifActive = !!(motifOpts.filter_custom_motif && motifOpts.custom_motif_seq);
     let motifFailCount = 0;
     for (const line of stdout.split(/\r?\n/)) {
       if (!line) continue;
@@ -447,6 +532,16 @@ app.post('/api/query-kmer', upload.single('kmersFile'), async (req, res) => {
       results.push(result);
     }
 
+    // Apply custom motif post-processing (done in JS, not via binary)
+    if (customMotifActive) {
+      applyCustomMotifPostProcessing(results, motifOpts);
+      if (!motifApplied) motifApplied = true;
+    }
+    // Recount motif failures after all post-processing
+    if (motifApplied || customMotifActive) {
+      motifFailCount = results.filter(r => r.motif_passes === false).length;
+    }
+
     const response = {
       total: results.length,
       found: foundCount,
@@ -471,8 +566,12 @@ app.post('/api/query-kmer', upload.single('kmersFile'), async (req, res) => {
         filter_low_complexity: motifOpts.filter_low_complexity || false,
         min_shannon_entropy: motifOpts.min_shannon_entropy,
         filter_dinucleotide_repeats: motifOpts.filter_dinucleotide_repeats || false,
+        filter_trinucleotide_repeats: motifOpts.filter_trinucleotide_repeats || false,
+        filter_tetranucleotide_repeats: motifOpts.filter_tetranucleotide_repeats || false,
         filter_restriction_sites: motifOpts.filter_restriction_sites || false,
         filter_functional_motifs: motifOpts.filter_functional_motifs || false,
+        filter_custom_motif: customMotifActive || false,
+        ...(customMotifActive ? { custom_motif_seq: motifOpts.custom_motif_seq } : {}),
       };
     }
 
@@ -560,9 +659,10 @@ app.post('/api/query-substring', async (req, res) => {
     const { stdout } = await runBinary(BIN_QUERY_SUBSTR, args, { timeoutMs: 2 * 60 * 1000 });
     const parsed = parseSubstringStdout(stdout);
 
-    const motifApplied = !!(motifOpts.motif_mode && motifOpts.motif_mode !== 'off');
+    let motifApplied = !!(motifOpts.motif_mode && motifOpts.motif_mode !== 'off');
+    const customMotifActiveSubstr = !!(motifOpts.filter_custom_motif && motifOpts.custom_motif_seq);
     let motifFailCount = 0;
-    const results = parsed.kmers.map((rawLine) => {
+    let results = parsed.kmers.map((rawLine) => {
       const parts = rawLine.split('\t');
       const kmer = parts[0];
       const result = { kmer, gc: gcContent(kmer), comp: ntComp(kmer) };
@@ -575,6 +675,19 @@ app.post('/api/query-substring', async (req, res) => {
       }
       return result;
     });
+
+    // Apply custom motif post-processing
+    if (customMotifActiveSubstr) {
+      applyCustomMotifPostProcessing(results, motifOpts);
+      if (motifOpts.motif_mode === 'exclude') {
+        results = results.filter(r => r.motif_passes !== false);
+      }
+      if (!motifApplied) motifApplied = true;
+    }
+    // Recount motif failures after all post-processing
+    if (motifApplied || customMotifActiveSubstr) {
+      motifFailCount = results.filter(r => r.motif_passes === false).length;
+    }
 
     res.json({
       cursorUsed,
@@ -696,6 +809,7 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 app.get('/kmer', (req, res) => res.sendFile(path.join(__dirname, 'public', 'kmer.html')));
 app.get('/substring', (req, res) => res.sendFile(path.join(__dirname, 'public', 'substring.html')));
 app.get('/generate', (req, res) => res.sendFile(path.join(__dirname, 'public', 'generate.html')));
+app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 
 const PORT = process.env.PORT || 8090;
 const server = app.listen(PORT, () => {

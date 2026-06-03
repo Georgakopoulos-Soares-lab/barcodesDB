@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>About – barcodesDB</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .about-section { margin-bottom: 32px; }
+    .about-section h3 { margin-bottom: 8px; }
+    .about-section p { margin-bottom: 10px; line-height: 1.65; }
+    .about-section ul { margin: 8px 0 12px 20px; line-height: 1.7; }
+    .about-section ul li { margin-bottom: 4px; }
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 12px; }
+    .feature-card { background: var(--bg2, #f9f9f9); border: 1px solid var(--border, #e2e8f0); border-radius: 8px; padding: 16px 18px; }
+    .feature-card h4 { margin: 0 0 6px; font-size: 0.95em; }
+    .feature-card p { margin: 0; font-size: 0.88em; color: var(--muted, #555); line-height: 1.5; }
+    .lab-link { font-weight: 600; color: var(--accent, #3b82f6); text-decoration: none; }
+    .lab-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <div class="brand-title">barcodesDB</div>
+        <span class="badge">A database of DNA barcodes</span>
+      </div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/kmer">K-mer Lookup</a>
+        <a href="/substring">Search barcodes</a>
+        <a href="/generate">Generate barcodes</a>
+        <a class="active" href="/about">About</a>
+      </nav>
+    </div>
+
+    <div class="card">
+      <h2>About barcodesDB</h2>
+
+      <!-- What is barcodesDB -->
+      <div class="about-section">
+        <h3>What is barcodesDB?</h3>
+        <p>
+          barcodesDB is a high-performance database of DNA barcodes — short k-mer sequences
+          (k&nbsp;=&nbsp;16, 17, or 18) that are absent from known genomic sequences.
+          These sequences can serve as molecular tags, identifiers, or probes that are
+          guaranteed not to cross-react with the reference genomes used during extraction.
+        </p>
+        <p>
+          The database is backed by compressed Roaring bitmaps that represent the full
+          4<sup>k</sup>-bit k-mer existence space, enabling O(1) membership queries across
+          billions of k-mers with low memory overhead.
+        </p>
+      </div>
+
+      <!-- Features -->
+      <div class="about-section">
+        <h3>Features</h3>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h4>K-mer Lookup</h4>
+            <p>Paste k-mer sequences or upload a file to instantly check presence or absence in the barcode database. Results include GC content, nucleotide composition, and per-k-mer motif annotations.</p>
+          </div>
+          <div class="feature-card">
+            <h4>Search Barcodes</h4>
+            <p>Query the database with a substring and filter results by GC content range. Results are paginated with cursor-based navigation and can be downloaded as TSV. Reverse-complement search is supported.</p>
+          </div>
+          <div class="feature-card">
+            <h4>Generate Barcodes</h4>
+            <p>Generate random DNA barcodes matching specified length, GC content window, and motif filter constraints — independently of the database. Useful for simulation and benchmarking.</p>
+          </div>
+          <div class="feature-card">
+            <h4>Motif Filters</h4>
+            <p>All three tools support rich per-barcode motif filtering: homopolymer runs, low-complexity / Shannon entropy, restriction enzyme sites, functional sequence motifs, repeat detection (di-, tri-, tetranucleotide), and custom user-defined motif sequences.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Extraction Algorithm -->
+      <div class="about-section">
+        <h3>Extraction Algorithm</h3>
+        <p>
+          Barcode extraction is performed by scanning reference genome FASTA files and
+          recording every observed k-mer in a dense bit-array of 4<sup>k</sup> bits —
+          one bit per possible k-mer, with standard ACGT base-4 encoding
+          (A=0, C=1, G=2, T=3; leftmost nucleotide most-significant).
+        </p>
+        <p>
+          After processing all input sequences, the complement of the observed set
+          (bits that remain unset) constitutes the candidate barcode space: k-mers
+          with no exact match in the reference genomes. Extraction is parallelised
+          across Slurm array tasks, each writing a partial bitarray shard; shards are
+          then merged with a bitwise OR and converted to CRoaring portable format for
+          compact storage and O(1) lookup at query time.
+        </p>
+        <ul>
+          <li><strong>Encoding</strong>: GC-first base-4 encoding; all 4 strands of the k-mer encoded and the canonical (minimum) index stored.</li>
+          <li><strong>Parallelism</strong>: Multi-threaded scanner with per-core shard accumulation to minimise lock contention.</li>
+          <li><strong>Storage</strong>: Dense bitarray during extraction → CRoaring compressed bitmap for queries (flags = 1 for dense, 2 for Roaring in the KBITv1 file format).</li>
+          <li><strong>Scalability</strong>: k=18 requires ~8 GB for the dense bitmap; Roaring compression typically reduces this by an order of magnitude for sparse barcode sets.</li>
+        </ul>
+      </div>
+
+      <!-- Lab -->
+      <div class="about-section">
+        <h3>Georgakopoulos-Soares Lab</h3>
+        <p>
+          barcodesDB was developed in the
+          <strong>Georgakopoulos-Soares Lab</strong>, a computational genomics research
+          group focused on sequence analysis, non-B DNA structures, and genome-wide
+          functional annotation.
+        </p>
+        <p>
+          <a class="lab-link" href="https://georgakopoulos-soares.com" target="_blank" rel="noopener noreferrer">
+            Visit the lab website →
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">© 2025 barcodesDB</div>
+  </div>
+</body>
+</html>
