@@ -6,17 +6,116 @@
   <title>About – barcodesDB</title>
   <link rel="stylesheet" href="/style.css" />
   <style>
-    .about-section { margin-bottom: 32px; }
-    .about-section h3 { margin-bottom: 8px; }
-    .about-section p { margin-bottom: 10px; line-height: 1.65; }
-    .about-section ul { margin: 8px 0 12px 20px; line-height: 1.7; }
-    .about-section ul li { margin-bottom: 4px; }
-    .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-top: 12px; }
-    .feature-card { background: var(--bg2, #f9f9f9); border: 1px solid var(--border, #e2e8f0); border-radius: 8px; padding: 16px 18px; }
-    .feature-card h4 { margin: 0 0 6px; font-size: 0.95em; }
-    .feature-card p { margin: 0; font-size: 0.88em; color: var(--muted, #555); line-height: 1.5; }
-    .lab-link { font-weight: 600; color: var(--accent, #3b82f6); text-decoration: none; }
+    .about-intro {
+      margin-bottom: 28px;
+    }
+    .about-intro h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+    .about-intro p {
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 700px;
+      margin: 0;
+    }
+
+    /* ── Feature tabs ── */
+    .feature-tabs {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+    }
+    .feature-tab {
+      padding: 10px 18px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .15s, border-color .15s;
+    }
+    .feature-tab:hover { color: var(--fg); }
+    .feature-tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+    /* ── Feature panels ── */
+    .feature-panel {
+      display: none;
+      padding: 24px 4px 8px;
+    }
+    .feature-panel.active { display: block; }
+
+    .feature-panel h3 {
+      font-size: 1.15rem;
+      margin: 0 0 10px;
+    }
+    .feature-panel p {
+      line-height: 1.7;
+      color: var(--muted);
+      max-width: 660px;
+      margin-bottom: 14px;
+    }
+    .feature-panel ul {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 18px;
+    }
+    .feature-panel ul li {
+      padding: 4px 0 4px 20px;
+      position: relative;
+      line-height: 1.6;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .feature-panel ul li::before {
+      content: "–";
+      position: absolute;
+      left: 2px;
+      color: var(--brand);
+      font-weight: 700;
+    }
+    .feature-panel .btn {
+      margin-top: 4px;
+    }
+
+    .example-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 14px 0 18px;
+      max-width: 600px;
+    }
+    .example-box .ex-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .example-box .ex-content {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--fg);
+    }
+    .example-box .ex-content .kmer {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      letter-spacing: 0.6px;
+    }
+
+    .lab-link { font-weight: 600; color: var(--brand); text-decoration: none; }
     .lab-link:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .feature-tab  { padding: 8px 12px; font-size: 0.84rem; }
+      .feature-panel { padding: 18px 4px 8px; }
+    }
   </style>
 </head>
 <body>
@@ -37,90 +136,188 @@
     </div>
 
     <div class="card">
-      <h2>About barcodesDB</h2>
 
-      <!-- What is barcodesDB -->
-      <div class="about-section">
-        <h3>What is barcodesDB?</h3>
+      <div class="about-intro">
+        <h2>About barcodesDB</h2>
         <p>
-          barcodesDB is a high-performance database of DNA barcodes — short k-mer sequences
-          (k&nbsp;=&nbsp;16, 17, or 18) that are absent from known genomic sequences.
-          These sequences can serve as molecular tags, identifiers, or probes that are
-          guaranteed not to cross-react with the reference genomes used during extraction.
+          barcodesDB is a database of DNA barcodes — short k-mer sequences (k = 16, 17, 18)
+          that are absent from known reference genomes. Each barcode can serve as a molecular
+          tag, unique identifier, or probe with no exact match in the genomes used during
+          extraction. Queries are answered by a pre-computed bitmap index, returning a
+          simple presence or absence result without the need for sequence alignment.
         </p>
-        <p>
-          The database is backed by compressed Roaring bitmaps that represent the full
-          4<sup>k</sup>-bit k-mer existence space, enabling O(1) membership queries across
-          billions of k-mers with low memory overhead.
+        <p style="margin-top:10px;">
+          The database was constructed by scanning 390,872 organismal genome assemblies
+          spanning the tree of life and recording every observed k-mer. Barcodes are
+          defined as k-mers with no occurrence in any of these genomes — termed
+          <em>DNA primes</em> — eliminating the possibility of off-target hybridization
+          or cross-reactivity with endogenous biological sequences. Details of the
+          construction and validation are described in the manuscript:
+          <em>Derivation of oligonucleotide barcodes that are absent from natural sequences</em>.
         </p>
       </div>
 
-      <!-- Features -->
-      <div class="about-section">
-        <h3>Features</h3>
-        <div class="feature-grid">
-          <div class="feature-card">
-            <h4>K-mer Lookup</h4>
-            <p>Paste k-mer sequences or upload a file to instantly check presence or absence in the barcode database. Results include GC content, nucleotide composition, and per-k-mer motif annotations.</p>
-          </div>
-          <div class="feature-card">
-            <h4>Search Barcodes</h4>
-            <p>Query the database with a substring and filter results by GC content range. Results are paginated with cursor-based navigation and can be downloaded as TSV. Reverse-complement search is supported.</p>
-          </div>
-          <div class="feature-card">
-            <h4>Generate Barcodes</h4>
-            <p>Generate random DNA barcodes matching specified length, GC content window, and motif filter constraints — independently of the database. Useful for simulation and benchmarking.</p>
-          </div>
-          <div class="feature-card">
-            <h4>Motif Filters</h4>
-            <p>All three tools support rich per-barcode motif filtering: homopolymer runs, low-complexity / Shannon entropy, restriction enzyme sites, functional sequence motifs, repeat detection (di-, tri-, tetranucleotide), and custom user-defined motif sequences.</p>
-          </div>
-        </div>
+      <!-- ─── Feature Tabs ─── -->
+      <div class="feature-tabs" role="tablist">
+        <button class="feature-tab active" data-tab="kmer" role="tab">
+          K-mer Lookup
+        </button>
+        <button class="feature-tab" data-tab="search" role="tab">
+          Search Barcodes
+        </button>
+        <button class="feature-tab" data-tab="generate" role="tab">
+          Generate Barcodes
+        </button>
+        <button class="feature-tab" data-tab="motifs" role="tab">
+          Motif Filters
+        </button>
       </div>
 
-      <!-- Extraction Algorithm -->
-      <div class="about-section">
-        <h3>Extraction Algorithm</h3>
+      <!-- ─── Panel: K-mer Lookup ─── -->
+      <div class="feature-panel active" id="panel-kmer" role="tabpanel">
+        <h3>K-mer Lookup</h3>
         <p>
-          Barcode extraction is performed by scanning reference genome FASTA files and
-          recording every observed k-mer in a dense bit-array of 4<sup>k</sup> bits —
-          one bit per possible k-mer, with standard ACGT base-4 encoding
-          (A=0, C=1, G=2, T=3; leftmost nucleotide most-significant).
-        </p>
-        <p>
-          After processing all input sequences, the complement of the observed set
-          (bits that remain unset) constitutes the candidate barcode space: k-mers
-          with no exact match in the reference genomes. Extraction is parallelised
-          across Slurm array tasks, each writing a partial bitarray shard; shards are
-          then merged with a bitwise OR and converted to CRoaring portable format for
-          compact storage and O(1) lookup at query time.
+          The K-mer Lookup tool accepts one or more k-mer sequences as input and returns a
+          membership determination for each query: present in a reference genome, or absent
+          and therefore available as a barcode.
         </p>
         <ul>
-          <li><strong>Encoding</strong>: GC-first base-4 encoding; all 4 strands of the k-mer encoded and the canonical (minimum) index stored.</li>
-          <li><strong>Parallelism</strong>: Multi-threaded scanner with per-core shard accumulation to minimise lock contention.</li>
-          <li><strong>Storage</strong>: Dense bitarray during extraction → CRoaring compressed bitmap for queries (flags = 1 for dense, 2 for Roaring in the KBITv1 file format).</li>
-          <li><strong>Scalability</strong>: k=18 requires ~8 GB for the dense bitmap; Roaring compression typically reduces this by an order of magnitude for sparse barcode sets.</li>
+          <li><strong>Input:</strong> paste sequences into a text area (one per line) or upload a <code>.txt</code> file</li>
+          <li><strong>Select k:</strong> choose k = 16, 17, or 18 (one length per request)</li>
+          <li><strong>Optional Hamming distance:</strong> set a minimum number of substitutions a queried k-mer must be away from matched same-length database sequences</li>
+          <li><strong>Optional motif filters:</strong> enable flagging or exclusion of sequences containing homopolymer runs, low-complexity regions, restriction enzyme sites, functional motifs, or custom patterns</li>
+          <li><strong>Results:</strong> a table showing each k-mer, its presence/absence status, GC content, nucleotide composition (A/C/G/T counts), and any active motif annotations</li>
         </ul>
+        <div class="example-box">
+          <div class="ex-label">Example</div>
+          <div class="ex-content">
+            A batch of 50 candidate 16-mer sequences is pasted into the text area with k=16
+            selected. The tool returns a table with columns: k-mer, present/absent, GC%,
+            A/C/G/T counts. 42 are <strong>absent</strong> (available as barcodes), 8 are
+            <strong>present</strong> in one or more reference genomes. With motif filters
+            enabled in flag mode, 3 sequences are additionally annotated for homopolymer runs.
+          </div>
+        </div>
+        <a class="btn" href="/kmer">Open K-mer Lookup →</a>
       </div>
 
-      <!-- Lab -->
-      <div class="about-section">
-        <h3>Georgakopoulos-Soares Lab</h3>
+      <!-- ─── Panel: Search Barcodes ─── -->
+      <div class="feature-panel" id="panel-search" role="tabpanel">
+        <h3>Search Barcodes</h3>
         <p>
-          barcodesDB was developed in the
-          <strong>Georgakopoulos-Soares Lab</strong>, a computational genomics research
-          group focused on sequence analysis, non-B DNA structures, and genome-wide
-          functional annotation.
+          The Search Barcodes tool provides substring-based querying of the full barcode
+          database with GC content filtering and cursor-based pagination.
+        </p>
+        <ul>
+          <li><strong>Search options:</strong> enter a substring (optional — leave empty for all barcodes), set GC% min/max, choose output length k, and toggle reverse-complement mode</li>
+          <li><strong>Motif filters:</strong> expand the optional filters section to enable flagging or exclusion by homopolymer runs, low complexity, restriction sites, functional motifs, tandem repeats, or custom patterns</li>
+          <li><strong>Results:</strong> a paginated table with k-mer, GC%, and A/C/G/T counts; each row also shows motif pass/fail and hit details when filters are active</li>
+          <li><strong>Navigation:</strong> Previous / Next buttons and a page selector for jumping between cursor-based result pages</li>
+          <li><strong>Export:</strong> download the current page as a TSV file</li>
+          <li><strong>Client-side filters:</strong> refine results on the current page further with per-column filters (text search, GC range, nucleotide counts) and sorting</li>
+        </ul>
+        <div class="example-box">
+          <div class="ex-label">Example</div>
+          <div class="ex-content">
+            A user types <span class="kmer">CGTAC</span> in the substring field, sets GC range
+            to 40–60%, k=18, and clicks Search. The results table shows 340 matching barcodes
+            across 3 pages. Toggling reverse-complement mode returns an additional 290 matches
+            on the opposite strand. The combined page can be exported as TSV via the Download button.
+          </div>
+        </div>
+        <a class="btn" href="/substring">Open Search Barcodes →</a>
+      </div>
+
+      <!-- ─── Panel: Generate Barcodes ─── -->
+      <div class="feature-panel" id="panel-generate" role="tabpanel">
+        <h3>Generate Barcodes</h3>
+        <p>
+          The Generate Barcodes tool produces random DNA sequences matching user-specified
+          constraints on length, GC content, and motif composition. Generation is independent
+          of the database and does not query the bitmap index.
+        </p>
+        <ul>
+          <li><strong>Parameters:</strong> set sequence length (k = 4–32), quantity (up to 10,000), and GC% min/max range</li>
+          <li><strong>Optional substring constraint:</strong> require every generated sequence to contain a specific motif</li>
+          <li><strong>Motif filters:</strong> expand the filter panel to exclude or flag sequences matching homopolymer, low-complexity, restriction site, functional motif, tandem repeat, or custom patterns</li>
+          <li><strong>Results:</strong> generated sequences appear in a paginated table with GC% and nucleotide composition, plus a summary showing how many sequences were attempted, generated, and discarded by filters</li>
+        </ul>
+        <div class="example-box">
+          <div class="ex-label">Example</div>
+          <div class="ex-content">
+            Set k=18, count=100, GC range 45–55%, enable the homopolymer filter (max run 4)
+            and restriction-site filter (EcoRI, BamHI) in exclude mode, then click Generate.
+            The output table lists 100 sequences meeting all constraints; a summary reports
+            that 12 candidates were discarded during generation due to filter violations.
+          </div>
+        </div>
+        <a class="btn" href="/generate">Open Generate Barcodes →</a>
+      </div>
+
+      <!-- ─── Panel: Motif Filters ─── -->
+      <div class="feature-panel" id="panel-motifs" role="tabpanel">
+        <h3>Motif Filters</h3>
+        <p>
+          The motif filter system allows users to flag or exclude sequences containing
+          specific nucleotide patterns. Filters are available across all three tools and
+          operate in either flag or exclude mode, selected via a dropdown.
+        </p>
+        <ul>
+          <li><strong>Mode selector:</strong> choose Off, Flag only (annotate results), or Exclude (remove from returned candidates)</li>
+          <li><strong>Homopolymer runs</strong> — consecutive repeats of a single base exceeding a configurable length threshold (checkbox + number input for max run length)</li>
+          <li><strong>Low-complexity</strong> — sequences below a Shannon entropy threshold (checkbox + number input for minimum entropy)</li>
+          <li><strong>Restriction enzyme sites</strong> — expandable list of 50 common restriction sites with individual checkboxes for each recognition sequence</li>
+          <li><strong>Functional motifs</strong> — expandable list of 25 conserved sequence patterns (TATA box, poly-A signals, splice sites, etc.) with individual checkboxes</li>
+          <li><strong>Tandem repeats</strong> — di-, tri-, and tetranucleotide repeats spanning three or more units (separate checkboxes for each repeat type)</li>
+          <li><strong>Custom motifs</strong> — a text field to input any user-defined nucleotide pattern; both forward and reverse-complement strands are scanned</li>
+          <li><strong>Results:</strong> when filters are active, the results table includes a Motif passes column (✓/✗) and a Motif hits column listing which filters were triggered for each sequence</li>
+        </ul>
+        <div class="example-box">
+          <div class="ex-label">Example</div>
+          <div class="ex-content">
+            Set motif mode to <strong>Flag</strong>, check the homopolymer box with max run 4,
+            check the EcoRI site (<span class="kmer">GAATTC</span>) in the restriction-site
+            list, type <span class="kmer">GATA</span> in the custom motif field, then run a
+            search. The results table gains two columns: Motif passes and Motif hits.
+            Among 500 results, 18 show ✗ in Motif passes: 12 triggered the homopolymer filter,
+            4 the EcoRI filter, 2 the custom motif. Switching to <strong>Exclude</strong> mode
+            removes those 18 from the output, leaving 482 barcodes.
+          </div>
+        </div>
+        <p style="font-size:0.9rem;color:var(--muted);">
+          Motif filters are available in all three tools: K-mer Lookup, Search Barcodes, and Generate Barcodes.
+        </p>
+      </div>
+
+      <!-- ─── Lab ─── -->
+      <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border);">
+        <p style="color:var(--muted);font-size:0.92rem;">
+          barcodesDB was developed by the
+          <strong>Georgakopoulos-Soares Lab</strong>, a computational genomics research group.
         </p>
         <p>
-          <a class="lab-link" href="https://georgakopoulos-soares-lab.com" target="_blank" rel="noopener noreferrer">
+          <a class="lab-link" href="https://georgakopoulos-soares-lab.com" target="_blank" rel="noopener noreferrer"
+             style="font-weight:600;color:var(--brand);text-decoration:none;">
             Visit the lab website →
           </a>
         </p>
       </div>
+
     </div>
 
     <div class="footer">© 2025 barcodesDB</div>
   </div>
+
+  <script>
+    document.querySelectorAll('.feature-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.feature-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.feature-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        const panel = document.getElementById('panel-' + tab.dataset.tab);
+        if (panel) panel.classList.add('active');
+      });
+    });
+  </script>
 </body>
 </html>
