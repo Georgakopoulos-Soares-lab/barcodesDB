@@ -1,0 +1,359 @@
+{
+  "schema": "barcodesdb-changelog/1",
+  "current_version": "1.0",
+  "update_cadence": "quarterly",
+  "next_update_due": "2026-11",
+  "releases": [
+    {
+      "version": "1.0",
+      "status": "current",
+      "released": "2026-08-04",
+      "snapshot_date": "2026-08-03T04:48:13-05:00",
+      "title": "Initial public release",
+      "summary": "First versioned release of barcodesDB. Built from a fresh NCBI snapshot of 403,199 complete genome assemblies spanning the tree of life, plus 12 raw environmental and host-associated metagenome sequencing runs totalling 215 Gbp. Reverse-complement equivalence is applied during extraction, so a barcode is absent on both strands.",
+      "k_values_served": [
+        16,
+        17,
+        18
+      ],
+      "counts": [
+        {
+          "k": 14,
+          "total_kmers": 268435456,
+          "present": 268435456,
+          "barcodes": 0,
+          "barcode_pct": 0.0,
+          "served": false
+        },
+        {
+          "k": 15,
+          "total_kmers": 1073741824,
+          "present": 1073741824,
+          "barcodes": 0,
+          "barcode_pct": 0.0,
+          "served": false
+        },
+        {
+          "k": 16,
+          "total_kmers": 4294967296,
+          "present": 4294962662,
+          "barcodes": 4634,
+          "barcode_pct": 0.000107894,
+          "served": true
+        },
+        {
+          "k": 17,
+          "total_kmers": 17179869184,
+          "present": 17136035328,
+          "barcodes": 43833856,
+          "barcode_pct": 0.255147,
+          "served": true
+        },
+        {
+          "k": 18,
+          "total_kmers": 68719476736,
+          "present": 62873699547,
+          "barcodes": 5845777189,
+          "barcode_pct": 8.50673,
+          "served": true
+        }
+      ],
+      "assemblies": {
+        "total": 403199,
+        "unique": 324126,
+        "redundant_gca_twins": 79073,
+        "genbank_gca": 324008,
+        "refseq_gcf": 79191,
+        "distinct_species": 53784,
+        "distinct_taxa": 109620,
+        "total_gbp": 1022.5,
+        "unique_gbp": 739.6,
+        "filter": "version_status==\"latest\" AND assembly_level==\"Complete Genome\" AND ftp_path!=\"na\"",
+        "by_group": [
+          {
+            "key": "viral",
+            "label": "Viruses",
+            "description": "Complete viral genomes, dominated by influenza A/B surveillance deposits",
+            "assemblies": 250077,
+            "unique_assemblies": 235499,
+            "species": 34859,
+            "gbp": 5.79,
+            "unique_gbp": 5.26,
+            "mean_gc": 44.0
+          },
+          {
+            "key": "bacteria",
+            "label": "Bacteria",
+            "description": "Complete bacterial genomes across all major phyla",
+            "assemblies": 149868,
+            "unique_assemblies": 86148,
+            "species": 17591,
+            "gbp": 639.5,
+            "unique_gbp": 363.18,
+            "mean_gc": 49.8
+          },
+          {
+            "key": "archaea",
+            "label": "Archaea",
+            "description": "Complete archaeal genomes",
+            "assemblies": 1653,
+            "unique_assemblies": 937,
+            "species": 676,
+            "gbp": 4.63,
+            "unique_gbp": 2.56,
+            "mean_gc": 50.4
+          },
+          {
+            "key": "fungi",
+            "label": "Fungi",
+            "description": "Complete fungal genomes, mostly yeasts and filamentous ascomycetes",
+            "assemblies": 778,
+            "unique_assemblies": 727,
+            "species": 351,
+            "gbp": 19.7,
+            "unique_gbp": 18.37,
+            "mean_gc": 47.5
+          },
+          {
+            "key": "plant",
+            "label": "Plants",
+            "description": "Complete plant genomes including several multi-gigabase crop assemblies",
+            "assemblies": 297,
+            "unique_assemblies": 294,
+            "species": 134,
+            "gbp": 193.51,
+            "unique_gbp": 193.27,
+            "mean_gc": 38.9
+          },
+          {
+            "key": "metagenomes",
+            "label": "Metagenome assemblies",
+            "description": "Assembled metagenomes deposited as complete genomes",
+            "assemblies": 291,
+            "unique_assemblies": 291,
+            "species": 16,
+            "gbp": 0.81,
+            "unique_gbp": 0.81,
+            "mean_gc": 54.5
+          },
+          {
+            "key": "invertebrate",
+            "label": "Invertebrates",
+            "description": "Complete invertebrate genomes, largely insects and nematodes",
+            "assemblies": 65,
+            "unique_assemblies": 64,
+            "species": 51,
+            "gbp": 15.51,
+            "unique_gbp": 14.6,
+            "mean_gc": 35.6
+          },
+          {
+            "key": "protozoa",
+            "label": "Protozoa",
+            "description": "Complete protozoan genomes",
+            "assemblies": 61,
+            "unique_assemblies": 58,
+            "species": 42,
+            "gbp": 1.64,
+            "unique_gbp": 1.59,
+            "mean_gc": 42.6
+          },
+          {
+            "key": "vertebrate_other",
+            "label": "Vertebrates, other",
+            "description": "Non-mammalian vertebrates: fish, birds, reptiles, amphibians",
+            "assemblies": 55,
+            "unique_assemblies": 54,
+            "species": 38,
+            "gbp": 49.73,
+            "unique_gbp": 48.28,
+            "mean_gc": 41.8
+          },
+          {
+            "key": "vertebrate_mammalian",
+            "label": "Vertebrates, mammals",
+            "description": "Mammalian genomes including the T2T-CHM13v2.0 human assembly",
+            "assemblies": 37,
+            "unique_assemblies": 37,
+            "species": 16,
+            "gbp": 91.7,
+            "unique_gbp": 91.7,
+            "mean_gc": 41.9
+          },
+          {
+            "key": "other",
+            "label": "Other",
+            "description": "Assemblies without an assigned NCBI group",
+            "assemblies": 17,
+            "unique_assemblies": 17,
+            "species": 10,
+            "gbp": 0.02,
+            "unique_gbp": 0.02,
+            "mean_gc": 35.7
+          }
+        ]
+      },
+      "metagenomes": {
+        "runs": 12,
+        "files": 24,
+        "total_gbp": 215.0,
+        "total_reads": 863080102,
+        "by_run": [
+          {
+            "run": "SRR16555193",
+            "environment": "Human gut",
+            "description": "Deep-coverage human gut metagenome, Hainan, China",
+            "gbp": 52.1,
+            "reads": 173673729,
+            "platform": "Illumina NovaSeq 6000",
+            "country": "China: HaiNan",
+            "collection_date": "2018-09-12",
+            "study": "PRJNA772518"
+          },
+          {
+            "run": "ERR538184",
+            "environment": "Marine surface water",
+            "description": "Tara Oceans expedition, protist size fraction, 5-7 m depth",
+            "gbp": 39.8,
+            "reads": 204887834,
+            "platform": "Illumina HiSeq 2000",
+            "country": null,
+            "collection_date": null,
+            "study": "PRJEB4352"
+          },
+          {
+            "run": "ERR1726848",
+            "environment": "Marine, sub-surface",
+            "description": "Tara Oceans expedition, protist size fraction, 30 m depth",
+            "gbp": 37.0,
+            "reads": 191659325,
+            "platform": "Illumina HiSeq 2000",
+            "country": null,
+            "collection_date": null,
+            "study": "PRJEB4352"
+          },
+          {
+            "run": "SRR25477458",
+            "environment": "Human gut, rural",
+            "description": "Gut microbiome of isolated villages, Copan, Honduras",
+            "gbp": 15.1,
+            "reads": 50621993,
+            "platform": "Illumina NovaSeq 6000",
+            "country": "Honduras:Copan",
+            "collection_date": "2021-06-24",
+            "study": "PRJNA999635"
+          },
+          {
+            "run": "SRR29868879",
+            "environment": "Human gut",
+            "description": "Yogurt-based dietary intervention cohort, Inner Mongolia, China",
+            "gbp": 13.8,
+            "reads": 46121506,
+            "platform": "Illumina NovaSeq 6000",
+            "country": "China: Inner Mongolia",
+            "collection_date": "2021-10-01",
+            "study": "PRJNA1134897"
+          },
+          {
+            "run": "SRR28087384",
+            "environment": "Mouse gut",
+            "description": "Mus musculus gut metagenome, China",
+            "gbp": 12.0,
+            "reads": 39921369,
+            "platform": "Illumina NovaSeq 6000",
+            "country": "China",
+            "collection_date": "2022-01-10",
+            "study": "PRJNA1080049"
+          },
+          {
+            "run": "SRR30731270",
+            "environment": "Soil",
+            "description": "Global standardised soil survey, shotgun metagenomics",
+            "gbp": 9.3,
+            "reads": 31382632,
+            "platform": "Illumina NovaSeq 6000",
+            "country": null,
+            "collection_date": "not applicable",
+            "study": "PRJNA1162941"
+          },
+          {
+            "run": "SRR31550839",
+            "environment": "Polar marine",
+            "description": "Southern Ocean sea ice and seawater",
+            "gbp": 8.2,
+            "reads": 27225834,
+            "platform": "Illumina NovaSeq 6000",
+            "country": "Southern Ocean",
+            "collection_date": "2022-07-21",
+            "study": "PRJNA1192238"
+          },
+          {
+            "run": "SRR5056826",
+            "environment": "Human gut, challenge",
+            "description": "Vibrio cholerae challenge study, Baltimore, USA",
+            "gbp": 8.1,
+            "reads": 32319905,
+            "platform": "Illumina HiSeq 2500",
+            "country": "USA: Baltimore",
+            "collection_date": "2013-04-28",
+            "study": "PRJNA352220"
+          },
+          {
+            "run": "SRR11412694",
+            "environment": "Human gut",
+            "description": "Human gut metagenome cohort, Jiangsu, China",
+            "gbp": 6.9,
+            "reads": 23050915,
+            "platform": "Illumina HiSeq 4000",
+            "country": "China: Jiangsu",
+            "collection_date": "2016",
+            "study": "PRJNA613947"
+          },
+          {
+            "run": "SRR30767187",
+            "environment": "Human gut",
+            "description": "Gut metagenome, Beijing, China",
+            "gbp": 6.7,
+            "reads": 22035874,
+            "platform": "Illumina NovaSeq 6000",
+            "country": "China: Beijing",
+            "collection_date": "2022-09-20",
+            "study": "PRJNA1164032"
+          },
+          {
+            "run": "SRR11412679",
+            "environment": "Human gut",
+            "description": "Human gut metagenome cohort, Jiangsu, China",
+            "gbp": 6.0,
+            "reads": 20179186,
+            "platform": "Illumina HiSeq 4000",
+            "country": "China: Jiangsu",
+            "collection_date": "2016",
+            "study": "PRJNA613947"
+          }
+        ]
+      },
+      "inputs": {
+        "assembly": {
+          "files": 403199,
+          "bytes": 301936789330
+        },
+        "metagenome": {
+          "files": 876,
+          "bytes": 158343350638
+        }
+      },
+      "methods": [
+        "Every k-mer observed in any input marks both itself and its reverse complement as present, applied in-pipeline rather than as a separate pass.",
+        "FASTQ reads are parsed as FASTQ: quality lines are never indexed as sequence, and no k-mer is allowed to span two reads.",
+        "k = 14, 15, 16, 17 and 18 are filled in a single pass over all 404,075 input files.",
+        "Windows containing any non-ACGT base are skipped.",
+        "A barcode is a k-mer with zero occurrences across every input, on either strand."
+      ],
+      "notes": [
+        "k=14 and k=15 are fully saturated: every possible sequence occurs in nature at these lengths, so no barcodes exist. k=16 yields only 4,634 barcodes, too few for practical library design. k=17 is the shortest usable length.",
+        "79,117 GenBank (GCA) records are byte-identical duplicates of their RefSeq (GCF) counterparts. This does not affect correctness because presence is idempotent under duplication, but the unique assembly count is 324,126."
+      ]
+    }
+  ]
+}

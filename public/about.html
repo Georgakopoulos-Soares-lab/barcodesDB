@@ -131,6 +131,7 @@
         <a href="/kmer">K-mer Lookup</a>
         <a href="/substring">Search barcodes</a>
         <a href="/generate">Generate barcodes</a>
+        <a href="/changelog">Changelog</a>
         <a class="active" href="/about">About</a>
       </nav>
     </div>
@@ -147,13 +148,22 @@
           simple presence or absence result without the need for sequence alignment.
         </p>
         <p style="margin-top:10px;">
-          The database was constructed by scanning 390,872 organismal genome assemblies
-          spanning the tree of life and recording every observed k-mer. Barcodes are
-          defined as k-mers with no occurrence in any of these genomes — termed
+          The current release (<a class="lab-link" href="/changelog">v1.0</a>) was constructed by
+          scanning 403,199 complete genome assemblies spanning the tree of life — 53,784 species,
+          1,023 Gbp — together with 215 Gbp of raw metagenomic sequencing from marine, soil, polar
+          and host-associated environments, recording every observed k-mer. Barcodes are
+          defined as k-mers with no occurrence in any of these sequences on either strand — termed
           <em>DNA primes</em> — eliminating the possibility of off-target hybridization
           or cross-reactivity with endogenous biological sequences. Details of the
           construction and validation are described in the manuscript:
           <em>Derivation of oligonucleotide barcodes that are absent from natural sequences</em>.
+        </p>
+        <p style="margin-top:10px;">
+          Because a barcode is defined by absence, it is only meaningful relative to the exact
+          data it was derived from. The database is rebuilt quarterly against a fresh snapshot,
+          and barcode counts fall with each release as more sequence space is observed — so cite
+          the version you used. See the
+          <a class="lab-link" href="/changelog">changelog</a> for the full contents of every release.
         </p>
       </div>
 

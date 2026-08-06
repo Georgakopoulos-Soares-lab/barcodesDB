@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Changelog – barcodesDB</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .cl-intro { margin-bottom: 28px; }
+    .cl-intro h2 { font-size: 1.5rem; font-weight: 800; margin: 0 0 8px; }
+    .cl-intro p {
+      color: var(--muted); line-height: 1.7; max-width: 720px; margin: 0;
+    }
+
+    /* ── Release header ── */
+    .release { border-top: 1px solid var(--border); padding-top: 22px; margin-top: 26px; }
+    .release:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+    .release-head {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+    }
+    .release-ver { font-size: 1.25rem; font-weight: 800; margin: 0; }
+    .release-date { color: var(--muted); font-size: 0.88rem; }
+    .badge.current { background: #dcfce7; color: #15803d; }
+    .release-summary {
+      color: var(--muted); line-height: 1.7; max-width: 720px; margin: 0 0 18px;
+    }
+
+    /* ── Stat row ── */
+    .stat-row {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px; margin: 18px 0 22px;
+    }
+    .stat-tile {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .stat-tile .val {
+      font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2;
+    }
+    .stat-tile .lbl {
+      font-size: 0.76rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--muted); margin-top: 4px;
+    }
+    @media (max-width: 860px) { .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 460px) { .stat-row { grid-template-columns: 1fr; } }
+
+    /* ── Tabs (same pattern as About) ── */
+    .cl-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+    .cl-tab {
+      padding: 10px 18px; border: none; background: none; cursor: pointer;
+      font-weight: 700; font-size: 0.9rem; color: var(--muted);
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color .15s, border-color .15s;
+    }
+    .cl-tab:hover { color: var(--fg); }
+    .cl-tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+    .cl-panel { display: none; padding: 20px 2px 4px; }
+    .cl-panel.active { display: block; }
+    .cl-panel > p {
+      color: var(--muted); line-height: 1.7; max-width: 720px; margin: 0 0 14px;
+    }
+
+    .table td.num, .table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .table td.grp { font-weight: 700; }
+    .table td.desc { color: var(--muted); font-size: 0.86rem; }
+    .table tfoot td {
+      font-weight: 800; border-top: 2px solid var(--border); border-bottom: none;
+    }
+    .row-dim td { color: var(--muted); }
+
+    .cl-list { list-style: none; padding: 0; margin: 8px 0 18px; }
+    .cl-list li {
+      padding: 4px 0 4px 20px; position: relative; line-height: 1.6;
+      color: var(--muted); font-size: 0.92rem;
+    }
+    .cl-list li::before {
+      content: "–"; position: absolute; left: 2px; color: var(--brand); font-weight: 700;
+    }
+
+    .cadence {
+      background: #e2f6ff; border: 1px solid #bae6fd; color: #0369a1;
+      padding: 12px 14px; border-radius: 10px; font-size: 0.88rem;
+      line-height: 1.6; max-width: 720px; margin: 18px 0 0;
+    }
+    .dl-link { font-weight: 600; color: var(--brand); text-decoration: none; font-size: 0.9rem; }
+    .dl-link:hover { text-decoration: underline; }
+    .err { color: #9a3412; }
+
+    /* ── Assembly browser ── */
+    .browse-head {
+      font-size: 1.02rem; margin: 26px 0 8px;
+      padding-top: 18px; border-top: 1px solid var(--border);
+    }
+    .browse-controls {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px;
+    }
+    .browse-controls #asm-q { flex: 2; min-width: 260px; }
+    .browse-controls #asm-group { flex: 1; min-width: 170px; }
+    .asm-chk {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.88rem; color: var(--muted); white-space: nowrap;
+    }
+    .dup-flag {
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      background: #f1f5f9; border: 1px solid var(--border);
+      border-radius: 999px; padding: 1px 7px; margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <div class="brand-title">barcodesDB</div>
+        <span class="badge">A database of DNA barcodes</span>
+      </div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/kmer">K-mer Lookup</a>
+        <a href="/substring">Search barcodes</a>
+        <a href="/generate">Generate barcodes</a>
+        <a class="active" href="/changelog">Changelog</a>
+        <a href="/about">About</a>
+      </nav>
+    </div>
+
+    <div class="card">
+      <div class="cl-intro">
+        <h2>Release history</h2>
+        <p>
+          Every barcodesDB release is built from a dated snapshot of the underlying
+          sequence data. Because a barcode is defined by <em>absence</em>, the set can
+          only be interpreted against the exact collection of genomes it was derived
+          from — so each release below records precisely what went in, and the resulting
+          barcode counts at every k.
+        </p>
+        <div class="cadence" id="cadence"></div>
+      </div>
+
+      <div id="releases">
+        <p class="help">Loading release data…</p>
+      </div>
+    </div>
+
+    <div class="footer">© 2025 barcodesDB</div>
+  </div>
+
+  <script>
+    const fmt  = n => (n === null || n === undefined) ? '–' : Number(n).toLocaleString('en-US');
+    const esc  = s => String(s ?? '').replace(/[&<>"']/g, c =>
+                   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const pct  = v => v === 0 ? '0' : (v < 0.001 ? v.toExponential(2) : v.toFixed(4).replace(/0+$/,'').replace(/\.$/,''));
+
+    function compact(n) {
+      if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return String(n);
+    }
+
+    function countsTable(counts) {
+      const rows = counts.map(c => `
+        <tr class="${c.served ? '' : 'row-dim'}">
+          <td><strong>${c.k}</strong></td>
+          <td class="num">${fmt(c.total_kmers)}</td>
+          <td class="num">${fmt(c.present)}</td>
+          <td class="num"><strong>${fmt(c.barcodes)}</strong></td>
+          <td class="num">${pct(c.barcode_pct)}%</td>
+          <td>${c.served
+                ? '<span class="pill" style="background:#dcfce7;border-color:#bbf7d0">served</span>'
+                : '<span class="pill">saturated — no barcodes</span>'}</td>
+        </tr>`).join('');
+      return `<table class="table">
+        <thead><tr>
+          <th>k</th><th class="num">Possible k-mers</th><th class="num">Observed in nature</th>
+          <th class="num">Barcodes</th><th class="num">Barcode share</th><th>Status</th>
+        </tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function assemblyTable(a) {
+      const rows = a.by_group.map(g => `
+        <tr>
+          <td class="grp">${esc(g.label)}</td>
+          <td class="num">${fmt(g.assemblies)}</td>
+          <td class="num">${fmt(g.unique_assemblies)}</td>
+          <td class="num">${fmt(g.species)}</td>
+          <td class="num">${g.gbp.toFixed(2)}</td>
+          <td class="num">${g.mean_gc === null ? '–' : g.mean_gc.toFixed(1)}</td>
+          <td class="desc">${esc(g.description)}</td>
+        </tr>`).join('');
+      return `<table class="table">
+        <thead><tr>
+          <th>Group</th><th class="num">Assemblies</th><th class="num">Unique</th>
+          <th class="num">Species</th><th class="num">Gbp</th><th class="num">Mean GC%</th><th>Description</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td>Total</td><td class="num">${fmt(a.total)}</td><td class="num">${fmt(a.unique)}</td>
+          <td class="num">${fmt(a.distinct_species)}</td><td class="num">${a.total_gbp.toFixed(1)}</td>
+          <td class="num">–</td><td></td>
+        </tr></tfoot></table>`;
+    }
+
+    function metagenomeTable(m) {
+      const rows = m.by_run.map(r => `
+        <tr>
+          <td class="kmer">${esc(r.run)}</td>
+          <td class="grp">${esc(r.environment)}</td>
+          <td class="num">${r.gbp.toFixed(1)}</td>
+          <td class="num">${compact(r.reads)}</td>
+          <td class="desc">${esc(r.platform)}</td>
+          <td class="desc">${esc(r.description)}</td>
+        </tr>`).join('');
+      return `<table class="table">
+        <thead><tr>
+          <th>Run</th><th>Environment</th><th class="num">Gbp</th>
+          <th class="num">Reads</th><th>Platform</th><th>Description</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td>${m.runs} runs</td><td></td><td class="num">${m.total_gbp.toFixed(1)}</td>
+          <td class="num">${compact(m.total_reads)}</td><td></td><td></td>
+        </tr></tfoot></table>`;
+    }
+
+    function renderRelease(r, idx) {
+      const a = r.assemblies, m = r.metagenomes;
+      const k18 = r.counts.find(c => c.k === 18);
+      const id = 'rel' + idx;
+      return `
+      <div class="release">
+        <div class="release-head">
+          <h3 class="release-ver">v${esc(r.version)}</h3>
+          ${r.status === 'current' ? '<span class="badge current">Current</span>' : ''}
+          <span class="release-date">Released ${esc(r.released)} · NCBI snapshot ${esc((r.snapshot_date||'').slice(0,10))}</span>
+        </div>
+        <p class="release-summary">${esc(r.summary)}</p>
+
+        <div class="stat-row">
+          <div class="stat-tile"><div class="val">${fmt(a.total)}</div><div class="lbl">Genome assemblies</div></div>
+          <div class="stat-tile"><div class="val">${fmt(a.distinct_species)}</div><div class="lbl">Distinct species</div></div>
+          <div class="stat-tile"><div class="val">${m.total_gbp.toFixed(0)} Gbp</div><div class="lbl">Metagenome reads</div></div>
+          <div class="stat-tile"><div class="val">${compact(k18.barcodes)}</div><div class="lbl">Barcodes at k=18</div></div>
+        </div>
+
+        ${countsTable(r.counts)}
+
+        <div class="cl-tabs" role="tablist" data-group="${id}">
+          <button class="cl-tab active" data-panel="${id}-asm"  role="tab">Genome assemblies</button>
+          <button class="cl-tab"        data-panel="${id}-mg"   role="tab">Metagenomes</button>
+          <button class="cl-tab"        data-panel="${id}-meth" role="tab">Methods &amp; notes</button>
+        </div>
+
+        <div class="cl-panel active" id="${id}-asm">
+          <p>
+            ${fmt(a.total)} assemblies (${fmt(a.unique)} unique after removing
+            ${fmt(a.redundant_gca_twins)} GenBank records that are byte-identical to their
+            RefSeq counterparts), covering ${fmt(a.distinct_species)} species across
+            ${fmt(a.distinct_taxa)} taxa and ${fmt(Math.round(a.total_gbp))} Gbp. Selected from
+            NCBI on the snapshot date with
+            <code>${esc(a.filter)}</code> — ${fmt(a.genbank_gca)} GenBank (GCA) and
+            ${fmt(a.refseq_gcf)} RefSeq (GCF) records. The per-accession list and the full
+            NCBI metadata row for every assembly are distributed with the release archive.
+          </p>
+          ${assemblyTable(a)}
+
+          <h4 class="browse-head">Browse individual assemblies</h4>
+          <p>
+            Every one of the ${fmt(a.total)} assemblies in this release, searchable by
+            accession, organism or assembly name.
+            <a class="dl-link" href="/downloads/assemblies_v1.tsv.gz" download>Download the full table (TSV, 6 MB gzipped) →</a>
+          </p>
+          <div class="browse-controls">
+            <input class="input" id="asm-q" type="search"
+                   placeholder="Search accession, organism or assembly name (e.g. GCF_009914755, Escherichia coli, T2T-CHM13)" />
+            <select class="input" id="asm-group">
+              <option value="">All groups</option>
+              ${a.by_group.map(g => `<option value="${esc(g.key)}">${esc(g.label)} (${fmt(g.assemblies)})</option>`).join('')}
+            </select>
+            <label class="asm-chk">
+              <input type="checkbox" id="asm-unique" /> Unique only
+            </label>
+          </div>
+          <div id="asm-status" class="help" style="margin-top:10px"></div>
+          <div class="table-scroll" style="margin-top:10px"><div id="asm-table"></div></div>
+          <div class="table-actions">
+            <div class="left">
+              <button class="btn secondary" id="asm-prev">← Previous</button>
+              <button class="btn secondary" id="asm-next">Next →</button>
+            </div>
+            <div class="right"><span class="pill" id="asm-page"></span></div>
+          </div>
+        </div>
+
+        <div class="cl-panel" id="${id}-mg">
+          <p>
+            ${m.runs} raw sequencing runs (${m.files} paired FASTQ files,
+            ${fmt(m.total_reads)} reads, ${m.total_gbp.toFixed(0)} Gbp) sampled from marine,
+            soil, polar and host-associated environments. These contribute sequence diversity
+            that assembled reference genomes miss, and are the single largest driver of the
+            barcode reduction in this release. Every file was md5-verified against the ENA
+            read_run report before use.
+          </p>
+          ${metagenomeTable(m)}
+        </div>
+
+        <div class="cl-panel" id="${id}-meth">
+          <p>How this release was built:</p>
+          <ul class="cl-list">${r.methods.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+          <p>Notes:</p>
+          <ul class="cl-list">${r.notes.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+        </div>
+      </div>`;
+    }
+
+    // ── Assembly browser: server-side search/paging over /api/assemblies ──
+    function initAssemblyBrowser() {
+      const qEl    = document.getElementById('asm-q');
+      const grpEl  = document.getElementById('asm-group');
+      const uniqEl = document.getElementById('asm-unique');
+      const tblEl  = document.getElementById('asm-table');
+      const statEl = document.getElementById('asm-status');
+      const pageEl = document.getElementById('asm-page');
+      const prevEl = document.getElementById('asm-prev');
+      const nextEl = document.getElementById('asm-next');
+      if (!qEl) return;
+
+      let page = 1, pages = 1, timer = null, seq = 0;
+
+      function load() {
+        const mySeq = ++seq;
+        const params = new URLSearchParams({ page: String(page), limit: '50' });
+        if (qEl.value.trim()) params.set('q', qEl.value.trim());
+        if (grpEl.value) params.set('group', grpEl.value);
+        if (uniqEl.checked) params.set('unique', '1');
+        statEl.textContent = 'Searching…';
+
+        fetch('/api/assemblies?' + params.toString())
+          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(d => {
+            if (mySeq !== seq) return;              // a newer request superseded this one
+            pages = d.pages; page = d.page;
+            statEl.textContent = d.total
+              ? `${fmt(d.total)} assemblies match — showing ${fmt((page-1)*d.limit + 1)}–${fmt((page-1)*d.limit + d.returned)}`
+              : 'No assemblies match this search.';
+            pageEl.textContent = `Page ${fmt(page)} of ${fmt(pages)}`;
+            prevEl.disabled = page <= 1;
+            nextEl.disabled = page >= pages;
+            tblEl.innerHTML = d.rows.length ? `<table class="table">
+              <thead><tr>
+                <th>Accession</th><th>Organism</th><th>Assembly name</th>
+                <th>Group</th><th class="num">Size (Mb)</th><th class="num">GC%</th>
+              </tr></thead><tbody>${d.rows.map(r => `
+                <tr>
+                  <td class="kmer">${esc(r.accession)}${r.duplicate
+                      ? '<span class="dup-flag" title="Byte-identical GenBank copy of a RefSeq assembly">dup</span>' : ''}</td>
+                  <td>${esc(r.organism)}</td>
+                  <td>${esc(r.asm_name)}</td>
+                  <td>${esc(r.group)}</td>
+                  <td class="num">${r.genome_size ? (r.genome_size/1e6).toFixed(2) : '–'}</td>
+                  <td class="num">${r.gc_percent === null ? '–' : r.gc_percent.toFixed(1)}</td>
+                </tr>`).join('')}</tbody></table>` : '';
+          })
+          .catch(err => {
+            if (mySeq !== seq) return;
+            statEl.innerHTML = `<span class="err">Could not load assemblies (${esc(err.message)}).</span>`;
+            tblEl.innerHTML = '';
+          });
+      }
+
+      const reset = () => { page = 1; load(); };
+      qEl.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(reset, 250); });
+      grpEl.addEventListener('change', reset);
+      uniqEl.addEventListener('change', reset);
+      prevEl.addEventListener('click', () => { if (page > 1) { page--; load(); } });
+      nextEl.addEventListener('click', () => { if (page < pages) { page++; load(); } });
+      load();
+    }
+
+    fetch('/changelog.json')
+      .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(doc => {
+        document.getElementById('cadence').innerHTML =
+          `<strong>Version ${esc(doc.current_version)} is the current release.</strong> ` +
+          `barcodesDB is refreshed on a <strong>${esc(doc.update_cadence)}</strong> cadence: each ` +
+          `update re-runs the full extraction against a new NCBI snapshot and an expanded set of ` +
+          `environmental sequencing runs. Barcode counts are expected to fall with every release ` +
+          `as more of the sequence space is observed, so pin the version you used when reporting ` +
+          `results. Next refresh due ${esc(doc.next_update_due)}.`;
+
+        document.getElementById('releases').innerHTML =
+          doc.releases.map(renderRelease).join('') +
+          `<p style="margin-top:22px">
+             <a class="dl-link" href="/changelog.json" download>Download this record as JSON →</a>
+           </p>`;
+
+        initAssemblyBrowser();
+
+        document.querySelectorAll('.cl-tab').forEach(tab => {
+          tab.addEventListener('click', () => {
+            const group = tab.closest('.cl-tabs');
+            group.querySelectorAll('.cl-tab').forEach(t => t.classList.remove('active'));
+            const container = group.parentElement;
+            container.querySelectorAll('.cl-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            const panel = document.getElementById(tab.dataset.panel);
+            if (panel) panel.classList.add('active');
+          });
+        });
+      })
+      .catch(err => {
+        document.getElementById('releases').innerHTML =
+          `<p class="err">Could not load release data (${esc(err.message)}).</p>`;
+      });
+  </script>
+</body>
+</html>

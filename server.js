@@ -804,11 +804,91 @@ app.post('/api/generate-random-kmers', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Assembly browser: per-assembly listing of the genomes behind the current
+// release. Backed by public/downloads/assemblies_v1.tsv.gz, which is also
+// offered as a direct download, so there is a single copy of the data.
+// Loaded once on first request (~403k rows, ~45 MB resident) and cached.
+// ---------------------------------------------------------------------------
+const ASSEMBLY_TSV = path.join(__dirname, 'public', 'downloads', 'assemblies_v1.tsv.gz');
+let assemblyRows = null;      // raw TSV lines, for substring search
+let assemblyGroup = null;     // exact group per row, so group filtering is not a substring match
+let assemblyDup = null;       // Uint8Array, 1 => redundant GCA twin
+let assemblyLoadErr = null;
+
+function loadAssemblies() {
+  if (assemblyRows || assemblyLoadErr) return;
+  try {
+    const zlib = require('zlib');
+    const text = zlib.gunzipSync(fs.readFileSync(ASSEMBLY_TSV)).toString('utf8');
+    const lines = text.split('\n');
+    lines.shift();                                  // header
+    const rows = lines.filter(l => l.length > 0);
+    const grp = new Array(rows.length);
+    const dup = new Uint8Array(rows.length);
+    for (let i = 0; i < rows.length; i++) {
+      const f = rows[i].split('\t');
+      grp[i] = f[3];
+      dup[i] = f[7] === '1' ? 1 : 0;
+    }
+    assemblyRows = rows; assemblyGroup = grp; assemblyDup = dup;
+    console.log(`assembly browser: loaded ${rows.length} rows`);
+  } catch (err) {
+    assemblyLoadErr = err;
+    console.error('assembly browser: failed to load', ASSEMBLY_TSV, err.message);
+  }
+}
+
+function parseAssemblyRow(line) {
+  const f = line.split('\t');
+  return {
+    accession: f[0],
+    organism: f[1],
+    asm_name: f[2],
+    group: f[3],
+    genome_size: f[4] ? Number(f[4]) : null,
+    gc_percent: f[5] ? Number(f[5]) : null,
+    species_taxid: f[6],
+    duplicate: f[7] === '1',
+  };
+}
+
+app.get('/api/assemblies', (req, res) => {
+  loadAssemblies();
+  if (assemblyLoadErr) {
+    return res.status(500).json({ error: 'assembly table unavailable: ' + assemblyLoadErr.message });
+  }
+
+  const q = String(req.query.q || '').trim().toLowerCase();
+  const group = String(req.query.group || '').trim();
+  const hideDup = String(req.query.unique || '') === '1';
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 50));
+
+  // group/unique are exact field tests via the precomputed indexes; only the
+  // free-text query does substring matching, over the untokenised line.
+  const matched = [];
+  for (let i = 0; i < assemblyRows.length; i++) {
+    if (group && assemblyGroup[i] !== group) continue;
+    if (hideDup && assemblyDup[i]) continue;
+    if (q && !assemblyRows[i].toLowerCase().includes(q)) continue;
+    matched.push(i);
+  }
+
+  const total = matched.length;
+  const pages = Math.max(1, Math.ceil(total / limit));
+  const start = (page - 1) * limit;
+  const rows = matched.slice(start, start + limit).map(i => parseAssemblyRow(assemblyRows[i]));
+
+  res.json({ total, page, pages, limit, returned: rows.length, q, group, unique: hideDup, rows });
+});
+
 // Pages
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/kmer', (req, res) => res.sendFile(path.join(__dirname, 'public', 'kmer.html')));
 app.get('/substring', (req, res) => res.sendFile(path.join(__dirname, 'public', 'substring.html')));
 app.get('/generate', (req, res) => res.sendFile(path.join(__dirname, 'public', 'generate.html')));
+app.get('/changelog', (req, res) => res.sendFile(path.join(__dirname, 'public', 'changelog.html')));
 app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'public', 'about.html')));
 
 const PORT = process.env.PORT || 8090;
