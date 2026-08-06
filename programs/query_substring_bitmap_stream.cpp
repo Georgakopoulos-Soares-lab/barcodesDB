@@ -742,11 +742,17 @@ struct LaneRuntime {
   vector<uint64_t> buf;
   size_t buf_pos=0;
 
+  // Shard scanned to its end. The lane stays active until buf is drained, so
+  // results found by the final refill pass are still emitted.
+  bool exhausted=false;
+
   void clear_buf(){ buf.clear(); buf_pos=0; }
+  bool pending() const { return buf_pos < buf.size(); }
 
   void free_all() {
     if (bm) { roaring64_bitmap_free(bm); bm=nullptr; }
     active=false;
+    exhausted=false;
     clear_buf();
   }
 };
@@ -770,7 +776,7 @@ static void refill_lane(LaneRuntime& lane,
                         const vector<uint64_t>& shard_ends)
 {
   lane.clear_buf();
-  if (!lane.active || !lane.bm) return;
+  if (!lane.active || lane.exhausted || !lane.bm) return;
 
   if (kout == k0) {
     uint64_t shardIdx = lane.shardIdx;
@@ -789,7 +795,7 @@ static void refill_lane(LaneRuntime& lane,
     }
 
     if (v == end) {
-      lane.active = false;
+      lane.exhausted = true;
     } else {
       lane.after = v - 1;
     }
@@ -818,7 +824,7 @@ static void refill_lane(LaneRuntime& lane,
     }
 
     while (parentB < end && roaring64_bitmap_contains(lane.bm, parentB)) parentB++;
-    if (parentB >= end) { lane.active=false; break; }
+    if (parentB >= end) { lane.exhausted = true; break; }
 
     uint8_t Lcur;
     uint64_t li, ri;
@@ -990,7 +996,7 @@ int main(int argc, char** argv) {
   auto shard_from_permpos = [&](uint32_t perm_pos)->unsigned { return (unsigned)perm[perm_pos]; };
 
   // Cursor init
-  uint32_t next_perm_pos = 0;
+  atomic<uint32_t> next_perm_pos{0};
   vector<WindowCursor::LaneState> lane_states;
 
   if (args.cursor_set) {
@@ -1044,6 +1050,7 @@ int main(int argc, char** argv) {
     lanes[i].bm = bm;
     lanes[i].hdr = hdr;
     lanes[i].active = true;
+    lanes[i].exhausted = false;
 
     lanes[i].clear_buf();
 
@@ -1069,8 +1076,12 @@ int main(int argc, char** argv) {
   auto try_fill_empty_lane = [&](int i)->bool {
     if (lanes[i].active) return true;
 
-    while (next_perm_pos < numShards) {
-      uint32_t ppos = next_perm_pos++;
+    for (;;) {
+      uint32_t ppos = next_perm_pos.fetch_add(1, memory_order_relaxed);
+      if (ppos >= (uint32_t)numShards) {
+        next_perm_pos.store((uint32_t)numShards, memory_order_relaxed);
+        return false;
+      }
       unsigned shardIdx = shard_from_permpos(ppos);
 
       lanes[i].perm_pos = ppos;
@@ -1085,6 +1096,7 @@ int main(int argc, char** argv) {
       lanes[i].hdr = hdr;
       lanes[i].clear_buf();
       lanes[i].active = true;
+      lanes[i].exhausted = false;
 
       if (kout == k0) {
         lanes[i].after = UINT64_MAX;
@@ -1101,12 +1113,15 @@ int main(int argc, char** argv) {
   // Fill any empty lanes initially
   for (int i=0;i<(int)args.window;i++) if (!lanes[i].active) (void)try_fill_empty_lane(i);
 
-  const uint64_t need = args.limit + 1;
+  // Emit exactly `limit`. Over-reading by one advanced that lane's `after`
+  // past a value which was then truncated away, losing one result per page
+  // boundary. hasMore is derived from lane state below instead.
+  const uint64_t need = args.limit;
   vector<uint64_t> out_vals;
   out_vals.reserve((size_t)need);
 
   double scan_sec_total=0.0;
-  uint64_t shards_loaded=0;
+  atomic<uint64_t> shards_loaded{0};
   uint64_t motif_filtered_count = 0; // candidates excluded by motif filters
   bool motif_active = (args.motif_opts.motif_mode != "off");
   bool motif_exclude = (args.motif_opts.motif_mode == "exclude");
@@ -1132,17 +1147,18 @@ int main(int argc, char** argv) {
             int i = idx.fetch_add(1);
             if (i >= (int)args.window) break;
             if (!lanes[i].active) continue;
-            if (lanes[i].buf_pos < lanes[i].buf.size()) continue;
+            if (lanes[i].pending()) continue;
+
+            // Exhausted AND drained -> this lane may take the next shard.
+            if (lanes[i].exhausted) {
+              lanes[i].free_all();
+              if (!try_fill_empty_lane(i)) continue;
+              if (lanes[i].bm) shards_loaded++;
+            }
 
             refill_lane(lanes[i], k0, kout, args.gcMinPct, args.gcMaxPct,
                         args.substring_set, patterns, args.refill_chunk,
                         shard_starts, shard_ends);
-
-            if (!lanes[i].active) {
-              lanes[i].free_all();
-              (void)try_fill_empty_lane(i);
-              if (lanes[i].bm) shards_loaded++;
-            }
           }
         });
       }
@@ -1203,7 +1219,7 @@ int main(int argc, char** argv) {
       if (ln.buf_pos < ln.buf.size()) { hasMore=true; break; }
       if (kout > k0) { hasMore=true; break; }
     }
-    if (!hasMore && next_perm_pos < numShards) hasMore=true;
+    if (!hasMore && next_perm_pos.load(memory_order_relaxed) < numShards) hasMore=true;
   }
 
   // Build next cursor
@@ -1214,7 +1230,7 @@ int main(int argc, char** argv) {
     outc.k0=(uint8_t)k0; outc.kout=(uint8_t)kout; outc.d=(uint8_t)(kout - k0);
     outc.numShards=(uint32_t)numShards;
     outc.seed=seed;
-    outc.next_perm_pos=next_perm_pos;
+    outc.next_perm_pos=next_perm_pos.load(memory_order_relaxed);
     outc.window=args.window;
     outc.burst=args.burst;
     outc.lanes.resize(args.window);
@@ -1294,7 +1310,7 @@ int main(int argc, char** argv) {
   cerr << "[INFO] Returned            : " << out_vals.size() << "\n";
   cerr << "[INFO] Has more            : " << (hasMore ? "yes" : "no") << "\n";
   cerr << "[INFO] Next cursor         : " << (cursorStr.empty() ? "(none)" : cursorStr) << "\n";
-  cerr << "[INFO] Shards loaded        : " << shards_loaded << "\n";
+  cerr << "[INFO] Shards loaded        : " << shards_loaded.load() << "\n";
   cerr << "[INFO] GC hist load time    : " << chrono::duration_cast<Sec>(t_hist1 - t_hist0).count() << " s\n";
   cerr << "[INFO] Scan time            : " << scan_sec_total << " s\n";
   cerr << "[INFO] Peak RSS             : " << pk << " KB (" << (pk/1024.0) << " MB)\n";

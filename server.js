@@ -627,9 +627,11 @@ app.post('/api/query-substring', async (req, res) => {
 
     // Decide shard base.
     // Rules:
-    // - For requested kOut in {16,17,18} => use that exact shard set.
-    // - For kOut > 18 => expansion is only supported from 18-mer shards.
+    // - For requested kOut in {16,17,18} => query that exact shard set directly,
+    //   with no construction: the shards already hold k-mers of that length.
+    // - For kOut > 18 => construct by expanding from the 18-mer shards.
     const baseK = (kOut > 18) ? 18 : kOut;
+    const needsConstruction = kOut > baseK;
     if (![16, 17, 18].includes(baseK)) {
       return res.status(400).json({ error: 'Only k=16,17,18 are supported as base lengths' });
     }
@@ -648,7 +650,11 @@ app.post('/api/query-substring', async (req, res) => {
       '--gc-max', String(gcMax),
       '--random_access',
     ];
-    if (kOut) args.push('--construct_k', String(kOut));
+    // Only pass --construct_k when we actually need to expand (k >= 19). For
+    // k = 16/17/18 the shard set already stores that exact length, and passing
+    // --construct_k there forces the binary down its expansion code path for no
+    // reason.
+    if (needsConstruction) args.push('--construct_k', String(kOut));
     if (substring) args.push('--substring', substring);
     if (cursorUsed) args.push('--cursor', cursorUsed);
     if (body.reverse_complement) args.push('--reverse_complement');

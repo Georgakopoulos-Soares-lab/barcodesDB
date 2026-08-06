@@ -560,7 +560,7 @@
     function renderPageInfo() {
       if (pageIndex < 0) { pageInfo.textContent = ''; return; }
       const cur = pages[pageIndex];
-      const kout = cur?.kOut ?? clampInt(constructKInp.value || '18', 18, 32, 18);
+      const kout = cur?.kOut ?? clampInt(constructKInp.value || '18', 16, 32, 18);
       const msg = [
         `Output k=${kout}`,
         `Page ${pageIndex + 1} of ${pages.length}`,
@@ -823,7 +823,7 @@
       const gcMinB = Math.floor(Number(gcBackendMin.value || 0));
       const gcMaxB = Math.floor(Number(gcBackendMax.value || 100));
       const limit = Math.floor(Number(pageSizeInp.value || 200));
-      const constructK = clampInt(constructKInp.value || '18', 18, 32, 18);
+      const constructK = clampInt(constructKInp.value || '18', 16, 32, 18);
 
       const body = {
         constructK,
@@ -866,7 +866,7 @@
     }
 
     async function runSearch() {
-      const kout = clampInt(constructKInp.value || '18', 18, 32, 18);
+      const kout = clampInt(constructKInp.value || '18', 16, 32, 18);
 
       const substring = substringInp.value.trim();
       if (substring && !isDNA(substring)) {
