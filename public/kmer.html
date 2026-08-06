@@ -88,15 +88,6 @@
                 <label for="filterTetranuclRepeats" style="font-weight:600;font-size:0.9em">Filter tetranucleotide repeats</label>
               </div>
 
-              <!-- Custom sequence motif -->
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-                <input type="checkbox" id="filterCustomMotif" />
-                <label for="filterCustomMotif" style="font-weight:600;font-size:0.9em">Filter custom sequence motif</label>
-              </div>
-              <div id="customMotifInputWrap" style="display:none;margin-left:28px;margin-bottom:10px">
-                <input class="input" type="text" id="customMotifSeq" placeholder="e.g., ACGT" style="width:220px" maxlength="50" />
-              </div>
-
               <!-- Restriction sites — expandable list -->
               <details class="details" style="margin-bottom:6px" id="reSitesDetails">
                 <summary style="display:flex;align-items:center;gap:8px" onclick="event.stopPropagation()">
@@ -123,6 +114,15 @@
                 </div>
               </details>
 
+              <!-- Custom sequence motif -->
+              <div style="display:flex;align-items:center;gap:10px;margin-top:4px;margin-bottom:4px">
+                <input type="checkbox" id="filterCustomMotif" />
+                <label for="filterCustomMotif" style="font-weight:600;font-size:0.9em">Filter custom sequence motif</label>
+              </div>
+              <div id="customMotifInputWrap" style="display:none;margin-left:28px;margin-bottom:10px">
+                <input class="input" type="text" id="customMotifSeq" placeholder="e.g., ACGT" style="width:220px" maxlength="50" />
+                <div class="help" style="margin-top:4px">DNA sequence (A/C/G/T only). Both forward and reverse-complement strands are scanned. Tagged as <code>custom_motif_&lt;SEQ&gt;</code> in results.</div>
+              </div>
             </div>
           </details>
 

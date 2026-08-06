@@ -703,7 +703,6 @@
             </div>
             <div class="right">
               <button class="btn secondary" id="dlBtn">Download TSV</button>
-              <button class="btn secondary" id="blastBtn">BLAST batch (nr/nt)</button>
             </div>
           </div>
         </div>
@@ -814,21 +813,6 @@
           ];
           const stamp = new Date().toISOString().replace(/[:.]/g, '-');
           downloadText(`barcodes_search_page${pageIndex+1}_${stamp}.tsv`, toTSV(rows));
-        };
-      }
-
-      const blastBtn = byId('blastBtn');
-      if (blastBtn) {
-        blastBtn.onclick = () => {
-          const src = (viewResults || []);
-          if (src.length === 0) return;
-          const query = src.map(r => r.kmer).join('\n');
-          const url = 'https://blast.ncbi.nlm.nih.gov/Blast.cgi' +
-            '?PROGRAM=blastn' +
-            '&PAGE_TYPE=BlastSearch' +
-            '&DATABASE=nr' +
-            '&QUERY=' + encodeURIComponent(query);
-          window.open(url, '_blank');
         };
       }
     }
